@@ -71,10 +71,18 @@ transcription model, not a conversational one. It returns what was said and neve
 speaks. That is a product boundary, not a limitation worked around: the tutor here
 is a human, and nothing in the app should be able to teach.
 
-Speakers are told apart **structurally, not by inference**. A lesson has two audio
-streams, each carrying one person, so every stream gets its own transcription
-session and no turn is ever attributed by voice. No diarisation model beats
-keeping the audio separate in the first place.
+Speakers are told apart **structurally, not by inference**. Each device
+transcribes its own microphone, so a turn is never attributed by voice. No
+diarisation model beats keeping the audio separate in the first place.
+
+Transcribing both streams from both sides seemed equivalent and was not: both
+people transcribed both voices, so every sentence was sent twice and appeared
+under both names. A device now hears only itself, which also uses the better
+audio - the raw microphone, before the network.
+
+Microphones still leak. Two devices in one room hear both people, so the same
+sentence can arrive twice under different names; a repeat within seconds is
+dropped as an echo rather than written up as a second turn.
 
 What the browser cannot know is which of those two people is the tutor. That is a
 fact about the people, not about the connection, so it stays a stated setting:

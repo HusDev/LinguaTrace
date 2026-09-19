@@ -6,9 +6,10 @@ Two people, two devices, about three minutes.
 
 - **Two devices.** A laptop for the tutor, a phone for the learner. Two tabs on
   one machine will not work: they cannot both open the camera.
-- **Headphones on at least one device**, or sit in different rooms. Otherwise
-  both microphones hear both voices, every sentence is transcribed twice, and the
-  notebook double-counts corrections.
+- **Headphones on at least one device**, or sit in different rooms. Each device
+  transcribes its own microphone, so without headphones the tutor's microphone
+  also hears the learner and files their sentence under the tutor's name. A
+  repeated sentence is dropped as an echo, but the attribution is still wrong.
 - **Two accounts**, made in advance: one tutor, one learner. Set the learner's
   languages (Learning English, Speaks Spanish) so the glosses appear.
 - **Do not open with "can you hear me".** The app deliberately ignores speech

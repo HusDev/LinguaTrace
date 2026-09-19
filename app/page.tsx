@@ -77,6 +77,7 @@ function describeOutcome(result: {
   added: string[];
   signals: Record<string, number>;
 }): string {
+  if (result.signals?.echo) return "echo of the other microphone";
   if (result.added.length > 0) {
     return [...new Set(result.added)]
       .map((a) => NOTE_LABELS[a] ?? a)
@@ -200,10 +201,13 @@ export default function LessonRoom() {
      this device is `myRole`, and the other end is the other role. */
   const transcription = useLiveTranscription({
     enabled: transcribing && Boolean(session),
-    streams:
-      myRole === "learner"
-        ? { learner: streams.local, tutor: streams.remote }
-        : { tutor: streams.local, learner: streams.remote },
+    /* Each device transcribes its own microphone and nothing else.
+       Transcribing both streams meant both people transcribed both voices, so
+       every sentence was sent twice and appeared under both names. It also has
+       the better audio: the raw local microphone, before the network. */
+    streams: myRole === "learner"
+      ? { learner: streams.local }
+      : { tutor: streams.local },
     onFinalTurn: onTranscribedTurn,
     onError: setError,
   });

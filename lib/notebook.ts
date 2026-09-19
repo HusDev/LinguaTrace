@@ -43,6 +43,36 @@ function id(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}-${counter}`;
 }
 
+/**
+ * Has this already been heard?
+ *
+ * Two microphones in one room hear both people, so the same sentence arrives
+ * twice - once from each side, each labelled with whoever owns that stream. The
+ * second copy is not a second turn: it is an echo, and writing it up doubles
+ * every correction and attributes half of them to the wrong person.
+ *
+ * Compared across speakers on purpose, because the wrong attribution is exactly
+ * what an echo produces.
+ */
+const ECHO_WINDOW_MS = 25_000;
+const ECHO_LOOKBACK = 6;
+
+function normalise(text: string): string {
+  return text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+}
+
+export function isEcho(notebook: Notebook, turn: Turn): boolean {
+  const spoken = normalise(turn.text);
+  if (spoken.length < 8) return false;
+  return notebook.turns
+    .slice(-ECHO_LOOKBACK)
+    .some(
+      (earlier) =>
+        normalise(earlier.text) === spoken &&
+        Math.abs(turn.at - earlier.at) < ECHO_WINDOW_MS,
+    );
+}
+
 /** The learner turns a tutor correction could plausibly be fixing. */
 function recentLearnerTurns(turns: Turn[], beforeIndex: number, take = 2): Turn[] {
   const out: Turn[] = [];
@@ -88,6 +118,13 @@ export async function processTurn(
   const added: string[] = [];
   if (notebook.processedTurnIds.includes(turn.id)) {
     return { turnId: turn.id, added, signals: {} };
+  }
+
+  /* An echo is not a turn. It is dropped before it reaches the transcript, so
+     the lesson does not show the same sentence under two names. */
+  if (isEcho(notebook, turn)) {
+    notebook.processedTurnIds.push(turn.id);
+    return { turnId: turn.id, added, signals: { echo: 1 } };
   }
 
   const index = notebook.turns.findIndex((t) => t.id === turn.id);

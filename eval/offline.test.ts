@@ -12,6 +12,7 @@ import { contextSentence, sentences, vocabularyCandidates } from "../lib/jev";
 import { continuesTurn, holdFor, joinFragments } from "../lib/transcriptMerge";
 import { createDecoder, encode, isEmpty, mergeChanges } from "../lib/boardSync";
 import { buildLessonPack } from "../lib/lessonPack";
+import { isEcho } from "../lib/notebook";
 import { emptyNotebook, type Notebook } from "../lib/types";
 
 let failed = 0;
@@ -44,6 +45,64 @@ check(
 check(
   "drops stopwords as standalone candidates",
   !candidates.includes("the") && !candidates.includes("is"),
+);
+
+console.log("\nisEcho()");
+/* Two microphones in one room hear both people, so the same sentence arrives
+   twice under different names. Observed on a live call. */
+const heard = {
+  ...emptyNotebook("lesson-e", "Hussein", "Mark"),
+  turns: [
+    {
+      id: "a",
+      speaker: "learner" as const,
+      text: "Yesterday I go to office for a big meeting.",
+      at: 1_000,
+    },
+  ],
+};
+check(
+  "the same sentence from the other microphone is an echo",
+  isEcho(heard, {
+    id: "b",
+    speaker: "tutor",
+    text: "Yesterday I go to office for a big meeting.",
+    at: 3_000,
+  }),
+);
+check(
+  "punctuation and case do not hide an echo",
+  isEcho(heard, {
+    id: "c",
+    speaker: "tutor",
+    text: "yesterday i go to office for a big meeting",
+    at: 3_000,
+  }),
+);
+check(
+  "the same words much later are said again, not echoed",
+  !isEcho(heard, {
+    id: "d",
+    speaker: "tutor",
+    text: "Yesterday I go to office for a big meeting.",
+    at: 400_000,
+  }),
+);
+check(
+  "a different sentence is not an echo",
+  !isEcho(heard, {
+    id: "e",
+    speaker: "tutor",
+    text: "Yesterday I went to the office.",
+    at: 3_000,
+  }),
+);
+check(
+  "a short reply is left alone",
+  !isEcho(
+    { ...heard, turns: [{ id: "a", speaker: "learner", text: "Yes.", at: 1_000 }] },
+    { id: "f", speaker: "tutor", text: "Yes.", at: 2_000 },
+  ),
 );
 
 console.log("\nboardSync()");
