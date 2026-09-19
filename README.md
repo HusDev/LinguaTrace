@@ -7,6 +7,45 @@ Lesson Pack the learner can revise from.
 The learner concentrates on speaking. The tutor concentrates on teaching. Neither
 of them takes notes.
 
+## What it looks like
+
+![The lesson notebook filling in as a lesson runs](docs/screenshots/lesson-notebook.jpg)
+
+A live lesson. The call is on the left with the running transcript, each turn
+labelled with what the classifier made of it. The notebook on the right writes
+itself: corrections struck through and rewritten, vocabulary glossed into the
+learner's own language, the tutor's explanation underlined. The mistake at the
+bottom has no correction yet, so it is a pencil note rather than a verdict.
+
+### The tutor sees a different question answered
+
+![The tutor view: uncorrected mistakes, recurring weaknesses, and a suggested drill](docs/screenshots/tutor-view.jpg)
+
+The learner's notebook answers "what did I learn?". The tutor needs "what have I
+not dealt with yet?" - a mistake still outstanding, what has been recurring for
+five lessons, and one concrete thing to do about it. All of it was already
+computed; none of it was visible to the person who could act on it.
+
+### Every lesson, kept
+
+![The learner home, showing lessons and which weaknesses recur](docs/screenshots/learner-home.jpg)
+
+"Verb tense, five lessons running" is a claim no in-memory app could make. So is
+"prepositions, not seen for four lessons", which is the more encouraging half.
+
+![A saved lesson, reopened later](docs/screenshots/lesson-record.jpg)
+
+A lesson is a page you can reopen, not a file you never will.
+
+### The whiteboard is a working surface
+
+![A whiteboard drawing taped into the notebook](docs/screenshots/whiteboard-capture.jpg)
+
+Tutors draw. A snapshot tapes into the notes like a photograph of a real
+whiteboard - while the notebook itself stays structured, because the Lesson Pack
+is generated from entries and a canvas has none to give it.
+
+
 ## The problem it addresses
 
 Learners forget most of what happens in a private lesson. They write incomplete
@@ -147,7 +186,7 @@ through most of a good lesson, and silence is indistinguishable from failure: th
 app looked broken for exactly as long as it had no way to say "I heard that, and
 there was nothing to write down."
 
-## The design rule: Jev judges, code writes## The design rule: Jev judges, code writes
+## The design rule: Jev judges, code writes
 
 Nothing in the notebook is generated. Jev returns typed answers and calibrated
 probabilities; the application decides what those answers mean and assembles the
@@ -176,14 +215,10 @@ An uncorrected mistake is shown differently again: a dotted pencil note reading
 and offering nothing in its place tells the learner they are wrong and leaves
 them there.
 
-## The interface
+## Why it looks like that
 
 Two surfaces that deliberately look nothing alike. The left is software: a dark
-panel holding the call, its controls, the running transcript and the practice
-list. The right is a sheet of ruled paper that fills itself in handwriting as the
-lesson happens - corrections struck through in red and rewritten in green,
-vocabulary glossed, the tutor's explanation underlined, and moments from the call
-taped in like photographs.
+panel holding the call. The right is a sheet of ruled paper.
 
 The split is the argument. The call is disposable; the page is what the learner
 keeps. Anything the model was unsure of is marked **unsure** on the page rather
