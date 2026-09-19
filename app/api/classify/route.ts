@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { processTurn } from "@/lib/notebook";
 import { getLearner } from "@/lib/db";
 import { currentAccount } from "@/lib/auth";
-import { getLesson, learnerIdFor, persist } from "@/lib/store";
+import { getLesson, learnerIdFor, persist, withLesson } from "@/lib/store";
 import { jevConfigured } from "@/lib/jev";
 import type { Turn } from "@/lib/types";
 
@@ -50,12 +50,20 @@ export async function POST(request: Request) {
   try {
     const learnerId = learnerIdFor(lessonId);
     const learner = learnerId ? getLearner(learnerId) : null;
-    const result = await processTurn(
-      notebook,
-      turn,
-      learner
-        ? { native: learner.nativeLanguage, target: learner.targetLanguage }
-        : undefined,
+    /* Turns for one lesson are folded in one at a time. Both participants post
+       to this endpoint against the same notebook, and interleaving them let a
+       correction be judged against a transcript that did not yet hold the
+       sentence it corrected. */
+    const result = await withLesson(lessonId, () =>
+      processTurn(notebook, turn, {
+        languages: learner
+          ? { native: learner.nativeLanguage, target: learner.targetLanguage }
+          : undefined,
+        /* A gloss can land after this response has gone. When it does the
+           lesson is written through again, so the word and its translation are
+           both there on the next load. */
+        onLateUpdate: () => persist(lessonId),
+      }),
     );
     // Written through after every turn, so a refresh resumes the lesson.
     persist(lessonId);

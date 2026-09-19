@@ -9,11 +9,23 @@
  */
 
 import { contextSentence, sentences, vocabularyCandidates } from "../lib/jev";
-import { continuesTurn, holdFor, joinFragments } from "../lib/transcriptMerge";
-import { createDecoder, encode, isEmpty, mergeChanges } from "../lib/boardSync";
+import type { TurnSelections, TurnSignals } from "../lib/jev";
+import {
+  MAX_TOTAL_HOLD_MS,
+  continuesTurn,
+  holdFor,
+  joinFragments,
+} from "../lib/transcriptMerge";
+import {
+  type CaptureMessage,
+  createDecoder,
+  encode,
+  isEmpty,
+  mergeChanges,
+} from "../lib/boardSync";
 import { buildLessonPack } from "../lib/lessonPack";
-import { isEcho } from "../lib/notebook";
-import { emptyNotebook, type Notebook } from "../lib/types";
+import { type Judge, isEcho, openMistake, processTurn, similarity } from "../lib/notebook";
+import { emptyNotebook, type Notebook, type Turn } from "../lib/types";
 
 let failed = 0;
 
@@ -387,5 +399,389 @@ check(
   withProgress.progress?.persistentErrorTypes.includes("Verb tense") === true,
 );
 
-console.log(`\n${failed === 0 ? "all offline checks passed" : `${failed} failed`}\n`);
-process.exit(failed === 0 ? 0 : 1);
+console.log("\nsharing a capture");
+/* A picture is far past the 8KB a signal carries, so it goes in pieces and is
+   rebuilt on the other side - the same envelope the whiteboard already used. A
+   capture that stayed in the browser that took it was the whole bug: the tutor
+   drew on the board, watched the learner tape it in, and never saw the note. */
+const picture = `data:image/jpeg;base64,${"Q".repeat(60_000)}`;
+const capturePieces = encode({
+  kind: "capture",
+  from: "sender",
+  capture: { id: "cap-1", dataUrl: picture, kind: "whiteboard" },
+});
+check("a picture is split to fit a signal", capturePieces.length > 1, String(capturePieces.length));
+check(
+  "and every piece is under the 8KB a signal carries",
+  capturePieces.every((piece) => piece.length < 8_000),
+);
+
+const captureDecoder = createDecoder<CaptureMessage>();
+const rebuiltCaptures = capturePieces
+  .map((piece) => captureDecoder(piece))
+  .filter((m): m is CaptureMessage => m !== null);
+check("nothing is handed on until the last piece lands", rebuiltCaptures.length === 1);
+check(
+  "and the picture survives the trip intact",
+  rebuiltCaptures[0]?.kind === "capture" &&
+    rebuiltCaptures[0].capture.dataUrl === picture,
+);
+
+/* Two people can tape something in at the same moment, so the pieces of one
+   message interleave with the other's. */
+const other = encode({
+  kind: "capture",
+  from: "peer",
+  capture: { id: "cap-2", dataUrl: `data:image/jpeg;base64,${"Z".repeat(60_000)}`, kind: "camera" },
+});
+const mixed = createDecoder<CaptureMessage>();
+const results: CaptureMessage[] = [];
+for (let i = 0; i < Math.max(capturePieces.length, other.length); i += 1) {
+  for (const piece of [capturePieces[i], other[i]]) {
+    if (!piece) continue;
+    const done = mixed(piece);
+    if (done) results.push(done);
+  }
+}
+check("two captures in flight at once are kept apart", results.length === 2);
+check(
+  "and neither picks up the other's pieces",
+  results.every(
+    (m) => m.kind === "capture" && new Set(m.capture.dataUrl.slice(23)).size === 1,
+  ),
+);
+
+console.log("\ntwo transcripts of one utterance");
+/* The echo check used to demand identical text. The two copies come from two
+   transcription sessions listening to two different audio paths, so they agree
+   on the words and differ on a filler - and both were written up. */
+const nearMiss = {
+  ...emptyNotebook("lesson-n", "Ana", "Mark"),
+  turns: [
+    {
+      id: "n1",
+      speaker: "learner" as const,
+      text: "Yesterday I go to the office for a big meeting.",
+      at: 1_000,
+    },
+  ],
+};
+check(
+  "the same sentence transcribed two ways is still an echo",
+  isEcho(nearMiss, {
+    id: "n2",
+    speaker: "tutor",
+    text: "Yesterday I go to the office for a big meeting, um.",
+    at: 3_000,
+  }),
+  String(
+    similarity(
+      "Yesterday I go to the office for a big meeting.",
+      "Yesterday I go to the office for a big meeting, um.",
+    ),
+  ),
+);
+check(
+  "a learner repeating the tutor is drilling, not echoing",
+  !isEcho(
+    {
+      ...emptyNotebook("lesson-d", "Ana", "Mark"),
+      turns: [
+        {
+          id: "d1",
+          speaker: "tutor" as const,
+          text: "Yesterday I went to the office for a big meeting with my manager.",
+          at: 1_000,
+        },
+      ],
+    },
+    { id: "d2", speaker: "learner", text: "Yesterday I went.", at: 3_000 },
+  ),
+);
+check(
+  "one speaker saying the same thing twice is repetition",
+  !isEcho(
+    {
+      ...emptyNotebook("lesson-r", "Ana", "Mark"),
+      turns: [
+        {
+          id: "r1",
+          speaker: "learner" as const,
+          text: "I would like to practise the past tense today.",
+          at: 1_000,
+        },
+      ],
+    },
+    {
+      id: "r2",
+      speaker: "learner",
+      text: "I would like to practise the past tense today.",
+      at: 3_000,
+    },
+  ),
+);
+
+console.log("\nopenMistake()");
+/* A correction may only land on a mistake the pairing question could see. The
+   old fallback took the newest uncorrected mistake anywhere in the notebook and
+   overwrote its text, so a learner could read a sentence they never said. */
+const withMistakes: Notebook = {
+  ...emptyNotebook("lesson-m", "Ana", "Mark"),
+  mistakes: [
+    {
+      id: "old",
+      said: "I have went there last year.",
+      errorType: "verb_tense",
+      severity: 2,
+      provenance: { turnIds: ["t-old"], score: 0.9, certainty: "confirmed" },
+    },
+    {
+      id: "recent",
+      said: "Yesterday I go to the office.",
+      errorType: "verb_tense",
+      severity: 2,
+      provenance: { turnIds: ["t-recent"], score: 0.9, certainty: "confirmed" },
+    },
+  ],
+};
+check(
+  "matches the mistake the tutor actually quoted",
+  openMistake(withMistakes, new Set(["t-recent"]), "Yesterday I go to the office.")?.id ===
+    "recent",
+);
+check(
+  "never reaches a mistake outside the window the model was shown",
+  /* The quoted sentence belongs to a turn the pairing question could not see.
+     Nothing eligible matches it, so there is no target - which is the point.
+     Returning the nearest open mistake instead is how a correction ends up
+     rewriting a sentence the tutor was not talking about. */
+  openMistake(withMistakes, new Set(["t-recent"]), "I have went there last year.") ===
+    undefined,
+);
+check(
+  "finds nothing when no eligible mistake is open",
+  openMistake(withMistakes, new Set(["t-unrelated"]), "anything") === undefined,
+);
+
+console.log("\nholdFor()");
+check(
+  "a finished sentence is held briefly",
+  holdFor("I went to the office.") === 1400,
+);
+check(
+  "a fragment is held longer, waiting for the rest",
+  holdFor("I went to the") === 7000,
+);
+check(
+  "a run that keeps going is still flushed at the ceiling",
+  holdFor("and then I went to the", MAX_TOTAL_HOLD_MS - 500) === 500,
+);
+check(
+  "a run past the ceiling flushes immediately",
+  holdFor("and then I went to the", MAX_TOTAL_HOLD_MS + 1000) === 0,
+);
+
+/* The policy checks are async, and this file compiles as CommonJS, so they
+   live in a function rather than at the top level. */
+async function policyChecks() {
+  console.log("\nprocessTurn() policy");
+  /* The policy layer is where the mistakes that reach the learner's page are
+     made, and it used to be untestable because every branch sat behind a live
+     call. These use a stand-in judge and no network. */
+  const NO_SIGNALS: TurnSignals = {
+    isLessonSpeech: 1,
+    isAsrArtefact: 0,
+    containsError: 0,
+    isCorrection: 0,
+    introducesVocabulary: 0,
+    isGrammarExplanation: 0,
+    flagsPracticeNeed: 0,
+    statesGoal: 0,
+  };
+
+  function judgeReturning(
+    signals: Partial<TurnSignals>,
+    selections: TurnSelections = {},
+  ): Judge {
+    return {
+      classifyTurn: async () => ({ ...NO_SIGNALS, ...signals }),
+      selectSpans: async () => selections,
+      translateTerm: async () => null,
+    };
+  }
+
+  const learnerTurn: Turn = {
+    id: "t1",
+    speaker: "learner",
+    text: "Yesterday I go to the office.",
+    at: 1_000,
+  };
+
+  {
+    const notebook = emptyNotebook("lesson-p1", "Ana", "Mark");
+    await processTurn(notebook, learnerTurn, {
+      judge: judgeReturning(
+        { containsError: 0.6 },
+        { learnerError: { errorType: "verb_tense", severity: 2 } },
+      ),
+    });
+    check(
+      "a typed learner error is written up",
+      notebook.mistakes.length === 1 && notebook.mistakes[0].errorType === "verb_tense",
+    );
+  }
+
+  {
+    const notebook = emptyNotebook("lesson-p2", "Ana", "Mark");
+    await processTurn(notebook, learnerTurn, {
+      /* The sentence scraped past the tentative floor and the classifier then
+         said there was no error in it. Before it had that option it had to name
+         one, and the learner read a mistake they had not made. */
+      judge: judgeReturning({ containsError: 0.6 }, { learnerError: null }),
+    });
+    check("no error means no mistake entry", notebook.mistakes.length === 0);
+  }
+
+  {
+    const notebook = emptyNotebook("lesson-p3", "Ana", "Mark");
+    await processTurn(notebook, learnerTurn, {
+      judge: judgeReturning({ containsError: 0.9, isAsrArtefact: 0.8 }),
+    });
+    check(
+      "a garbled transcript is not an accusation",
+      notebook.mistakes.length === 0,
+    );
+  }
+
+  {
+    /* A tutor correcting something never flagged must create its own entry, not
+       repaint an unrelated older one. */
+    const notebook: Notebook = {
+      ...emptyNotebook("lesson-p4", "Ana", "Mark"),
+      turns: [{ id: "old-turn", speaker: "learner", text: "I have went there.", at: 0 }],
+      mistakes: [
+        {
+          id: "stale",
+          said: "I have went there.",
+          errorType: "verb_tense",
+          severity: 2,
+          provenance: { turnIds: ["old-turn"], score: 0.9, certainty: "confirmed" },
+        },
+      ],
+    };
+    await processTurn(
+      notebook,
+      { id: "t2", speaker: "tutor", text: "We say on Monday, not in Monday.", at: 60_000 },
+      {
+        judge: judgeReturning(
+          { isCorrection: 0.9 },
+          {
+            correction: {
+              corrected: "We say on Monday, not in Monday.",
+              original: "I went in Monday.",
+              errorType: "preposition",
+              severity: 1,
+              confidence: 0.9,
+              spanConfidence: 0.8,
+            },
+          },
+        ),
+      },
+    );
+    check(
+      "an unrelated open mistake is left alone",
+      notebook.mistakes[0].said === "I have went there." &&
+        notebook.mistakes[0].corrected === undefined,
+    );
+    check(
+      "the tutor's correction gets its own entry",
+      notebook.mistakes.length === 2 && notebook.mistakes[1].said === "I went in Monday.",
+    );
+  }
+
+  {
+    const notebook = emptyNotebook("lesson-p5", "Ana", "Mark");
+    const slow: Judge = {
+        /* Never answers, so the turn's own deadline is what ends it - the real
+         path, rather than a stand-in for it. */
+      classifyTurn: (_t, _c, o) =>
+        new Promise((_resolve, reject) => {
+          /* `AbortSignal.timeout` arms an unref'd timer, so on its own it will
+             not hold the event loop open and this process would exit before the
+             deadline fired. A server always has a request in flight to hold it;
+             a test has to say so. */
+          const keepAlive = setTimeout(() => reject(new Error("never aborted")), 2_000);
+          o?.signal?.addEventListener("abort", () => {
+            clearTimeout(keepAlive);
+            reject(new Error("aborted"));
+          });
+        }),
+      selectSpans: async () => ({}),
+      translateTerm: async () => null,
+    };
+    const result = await processTurn(notebook, learnerTurn, {
+      judge: slow,
+      deadlineMs: 20,
+    });
+    check("a turn that could not be judged says so", result.signals.timedOut === 1);
+    check("and writes nothing", notebook.mistakes.length === 0);
+    check("but stays in the transcript", notebook.turns.length === 1);
+  }
+
+  {
+    const notebook = emptyNotebook("lesson-p7", "Ana", "Mark");
+    const broken: Judge = {
+      classifyTurn: async () => {
+        throw new Error("TYPESAFE_API_KEY is not set");
+      },
+      selectSpans: async () => ({}),
+      translateTerm: async () => null,
+    };
+    let reported = "";
+    try {
+      await processTurn(notebook, learnerTurn, { judge: broken });
+    } catch (error) {
+      reported = error instanceof Error ? error.message : String(error);
+    }
+    /* A misconfigured key is not slowness. Reporting it as "not judged in time"
+       would leave someone waiting on a lesson that can never be judged at all. */
+    check(
+      "a real failure is reported, not disguised as a timeout",
+      reported === "TYPESAFE_API_KEY is not set",
+      reported,
+    );
+  }
+
+  {
+    const notebook = emptyNotebook("lesson-p6", "Ana", "Mark");
+    let resolveGloss: (value: string | null) => void = () => {};
+    const judge: Judge = {
+      classifyTurn: async () => ({ ...NO_SIGNALS, introducesVocabulary: 0.9 }),
+      selectSpans: async () => ({ vocabulary: { term: "to draw a blank", confidence: 0.8 } }),
+      translateTerm: () => new Promise((resolve) => { resolveGloss = resolve; }),
+    };
+    await processTurn(
+      notebook,
+      { id: "t3", speaker: "tutor", text: "To draw a blank means your mind goes empty.", at: 0 },
+      { judge, languages: { native: "Spanish", target: "English" } },
+    );
+    /* The word is on the page before the dictionary has answered. Waiting on a
+       second provider to gloss a word the tutor already said aloud made a slow
+       lookup into a slow notebook. */
+    check(
+      "the word is written before its gloss arrives",
+      notebook.vocabulary.length === 1 && notebook.vocabulary[0].translation === undefined,
+    );
+    resolveGloss("quedarse en blanco");
+    await new Promise((r) => setTimeout(r, 0));
+    check(
+      "and the gloss fills in behind it",
+      notebook.vocabulary[0].translation === "quedarse en blanco",
+    );
+  }
+}
+
+void policyChecks().then(() => {
+  console.log(`\n${failed === 0 ? "all offline checks passed" : `${failed} failed`}\n`);
+  process.exit(failed === 0 ? 0 : 1);
+});

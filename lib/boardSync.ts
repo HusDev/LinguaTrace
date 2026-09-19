@@ -1,5 +1,6 @@
 /**
- * Sharing the whiteboard over the lesson's own video session.
+ * Sharing the whiteboard, and anything else large, over the lesson's own video
+ * session.
  *
  * The two people are already in a Vonage room, authenticated and connected, so
  * the drawing rides that rather than adding a second realtime service to run,
@@ -11,6 +12,31 @@
  */
 
 export const BOARD_SIGNAL = "lt-board";
+
+/**
+ * Captures ride the same session on their own channel.
+ *
+ * A snapshot taped into the notes is part of the lesson both people are in, and
+ * it used to exist only in the browser that pressed the button: the tutor drew
+ * on the board, the learner taped it in, and the tutor never saw the note. The
+ * board itself was already shared, so the picture of it should be too.
+ *
+ * A separate signal type rather than another board message kind, because the
+ * board's own channel is busy during a stroke and a capture is not a drawing.
+ */
+export const CAPTURE_SIGNAL = "lt-capture";
+
+export interface SharedCapture {
+  id: string;
+  dataUrl: string;
+  kind: "camera" | "whiteboard";
+}
+
+export type CaptureMessage =
+  | { kind: "capture"; from: string; capture: SharedCapture }
+  /** Someone arriving mid-lesson asking for what has already been taped in. */
+  | { kind: "hello"; from: string }
+  | { kind: "all"; from: string; captures: SharedCapture[] };
 
 /** Comfortably under Vonage's 8KB limit once the envelope is counted. */
 const CHUNK_SIZE = 6000;
@@ -82,7 +108,7 @@ interface Envelope {
   body: string;
 }
 
-export function encode(message: BoardMessage): string[] {
+export function encode(message: BoardMessage | CaptureMessage): string[] {
   const body = JSON.stringify(message);
   if (body.length <= CHUNK_SIZE) {
     return [JSON.stringify({ id: "1", index: 0, total: 1, body } satisfies Envelope)];
@@ -106,7 +132,7 @@ export function encode(message: BoardMessage): string[] {
  * Parts of one message can interleave with another's, so each is collected
  * under its own id and only handed on once every piece is present.
  */
-export function createDecoder(): (raw: string) => BoardMessage | null {
+export function createDecoder<T = BoardMessage>(): (raw: string) => T | null {
   const pending = new Map<string, string[]>();
 
   return (raw: string) => {
@@ -120,7 +146,7 @@ export function createDecoder(): (raw: string) => BoardMessage | null {
 
     if (envelope.total === 1) {
       try {
-        return JSON.parse(envelope.body) as BoardMessage;
+        return JSON.parse(envelope.body) as T;
       } catch {
         return null;
       }
@@ -133,7 +159,7 @@ export function createDecoder(): (raw: string) => BoardMessage | null {
     if (parts.filter((p) => typeof p === "string").length < envelope.total) return null;
     pending.delete(envelope.id);
     try {
-      return JSON.parse(parts.join("")) as BoardMessage;
+      return JSON.parse(parts.join("")) as T;
     } catch {
       return null;
     }

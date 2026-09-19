@@ -81,6 +81,16 @@ export async function translateTerm(
             ],
           },
         ],
+        /* The generous token ceiling looks like an oversight for a reply capped
+           at six words, and is not worth tightening. Measured against this
+           model: a gloss spends no thinking tokens at all, and the call takes
+           about the same half-second whether the ceiling is 48 or 4000, so the
+           number buys headroom for a longer language at no cost.
+
+           Setting `thinkingConfig: { thinkingBudget: 0 }` here is the tempting
+           change and a breaking one - this model rejects it outright with a 400,
+           and because a failed gloss is deliberately swallowed, every
+           translation in the app quietly became null with nothing in the logs. */
         config: { temperature: 0, maxOutputTokens: 4000 },
       });
 

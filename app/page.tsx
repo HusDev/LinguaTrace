@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { NotebookPage } from "@/components/Notebook";
 import { LessonPackView } from "@/components/LessonPackView";
 import { LiveRail } from "@/components/LiveRail";
@@ -11,12 +11,26 @@ import { TutorView } from "@/components/TutorView";
 import { MobileLesson, type MobileTab } from "@/components/MobileLesson";
 import type { RoomApi, RoomStreams } from "@/components/VideoRoom";
 import type { BoardSync, WhiteboardApi } from "@/components/Whiteboard";
-import { BOARD_SIGNAL } from "@/lib/boardSync";
+import {
+  BOARD_SIGNAL,
+  CAPTURE_SIGNAL,
+  type CaptureMessage,
+  createDecoder,
+  encode,
+} from "@/lib/boardSync";
+import { shrinkCapture } from "@/lib/captureImage";
 import type { LessonPack } from "@/lib/lessonPack";
 import { useSpeech, useSpeechSupported } from "@/lib/useSpeech";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import { useLiveTranscription } from "@/lib/useLiveTranscription";
-import { emptyNotebook, type Notebook, type Speaker, type Turn } from "@/lib/types";
+import {
+  ASR_ARTEFACT_THRESHOLD,
+  LESSON_SPEECH_THRESHOLD,
+  emptyNotebook,
+  type Notebook,
+  type Speaker,
+  type Turn,
+} from "@/lib/types";
 
 /* The video SDK touches `window` at module scope, so it must not render on the
    server. */
@@ -77,16 +91,44 @@ function describeOutcome(result: {
   added: string[];
   signals: Record<string, number>;
 }): string {
-  if (result.signals?.echo) return "echo of the other microphone";
+  /* A turn the judgments could not answer for in time is not a turn that
+     produced nothing, and saying so is the difference between an app that is
+     behind and one that looks broken. */
+  if (result.signals?.timedOut) return "not judged in time";
   if (result.added.length > 0) {
     return [...new Set(result.added)]
       .map((a) => NOTE_LABELS[a] ?? a)
       .join(" · ");
   }
   const gate = result.signals?.isLessonSpeech ?? 1;
-  if (gate < 0.6) return "not lesson speech";
+  if (gate < LESSON_SPEECH_THRESHOLD) return "not lesson speech";
+  /* The transcript, not the learner, is what looks wrong here. Saying which
+     keeps the app from appearing to have missed something. */
+  if ((result.signals?.isAsrArtefact ?? 0) >= ASR_ARTEFACT_THRESHOLD) {
+    return "heard, but the transcript looks garbled";
+  }
   return "heard, nothing to note";
 }
+
+/**
+ * The server's transcript, plus any turn this device has posted that has not
+ * come back yet. Ordered by the server, because it sees both sides.
+ */
+function mergeTurns(fromServer: Turn[], local: Turn[]): Turn[] {
+  const known = new Set(fromServer.map((t) => t.id));
+  return [...fromServer, ...local.filter((t) => !known.has(t.id))];
+}
+
+/**
+ * The three places the right-hand panel can be.
+ *
+ * "todo" is the tutor's own question - what has not been dealt with yet - and
+ * "notes" is the learner's page. The tutor used to get the first in place of
+ * the second, which answered their question and hid the lesson: the notebook is
+ * what the learner keeps and what the tutor is writing into by teaching, so not
+ * being able to look at it was a gap rather than a focus.
+ */
+type Panel = "todo" | "notes" | "whiteboard";
 
 interface Capture {
   id: string;
@@ -126,15 +168,27 @@ export default function LessonRoom() {
     name: string;
     role: Speaker;
   } | null>(null);
-  /* Who you are decides your side of the lesson. It is not a control. */
+  /* Who you are decides your side of the lesson. It is not a control.
+     Until the account has loaded there is no answer, and guessing one is not
+     harmless: the questions asked of a turn depend on who said it, so a tutor
+     filed as a learner is never asked whether they just corrected something,
+     taught a word, or explained a rule. Those turns are not judged badly - they
+     are judged as the wrong person's, and the notebook stays empty however good
+     the teaching was. So nothing is transcribed until this is known. */
   const myRole: Speaker = me?.role ?? "learner";
+  const roleKnown = me !== null;
   const [draft, setDraft] = useState("");
   const [streams, setStreams] = useState<RoomStreams>({ local: null, remote: null });
   /* The microphone is the switch. Transcription starts with the room and pauses
      while muted, so there is one control rather than two that overlap: a mic
      button that does not stop the notes is not a mute. */
   const [micOn, setMicOn] = useState(true);
-  const [panel, setPanel] = useState<"notes" | "whiteboard">("notes");
+  const [chosenPanel, setPanel] = useState<Panel | null>(null);
+  /* Null until someone picks, so the opening panel can follow the role without
+     an effect writing state behind the user's back. A tutor opens on their own
+     view because it is the one with something to act on; after that the choice
+     is theirs and sticks. */
+  const panel: Panel = chosenPanel ?? (myRole === "tutor" ? "todo" : "notes");
   /* On a phone the call and the notes cannot share a screen, so they become two
      panes. Stacked, the notebook - the thing the learner keeps - sat several
      screens below the video and the transcript. Above `lg` both are visible and
@@ -152,6 +206,13 @@ export default function LessonRoom() {
   /* Supplied by the server when the lesson starts. */
   const [lessonDate, setLessonDate] = useState("");
 
+  /* How much of the lesson the newest applied response had seen. Turns are
+     posted as they are spoken and answered concurrently, so responses do not
+     come back in the order they were sent; without this, an older one landing
+     last replaced the notebook with a staler copy and notes the learner had
+     already read disappeared off the page. */
+  const applied = useRef(0);
+
   const sendTurn = useCallback(async (turn: Turn, id: string) => {
     try {
       const res = await fetch("/api/classify", {
@@ -160,9 +221,33 @@ export default function LessonRoom() {
         body: JSON.stringify({ lessonId: id, turn }),
       });
       const data = await res.json();
-      if (data.notebook) setNotebook(data.notebook);
+      if (data.notebook) {
+        const seen = data.notebook.processedTurnIds?.length ?? 0;
+        if (seen >= applied.current) {
+          applied.current = seen;
+          /* The transcript is merged rather than replaced. The server holds
+             both sides of the lesson, so its turns are the ones to keep; but a
+             turn this device has only just posted is not in them yet, and
+             replacing outright made it flicker out and back. */
+          setNotebook((n) => ({
+            ...data.notebook,
+            turns: mergeTurns(data.notebook.turns ?? [], n.turns),
+          }));
+        }
+      }
       if (data.result) {
-        setOutcomes((o) => ({ ...o, [turn.id]: describeOutcome(data.result) }));
+        /* An echo is the other microphone hearing the same sentence. The server
+           never took it as a turn, so this device drops the copy it optimistically
+           added - otherwise the line stays on this page and nowhere else, which is
+           the double transcript the separate streams were meant to end. */
+        if (data.result.signals?.echo) {
+          setNotebook((n) => ({
+            ...n,
+            turns: n.turns.filter((t) => t.id !== turn.id),
+          }));
+        } else {
+          setOutcomes((o) => ({ ...o, [turn.id]: describeOutcome(data.result) }));
+        }
       }
       setError(res.ok ? null : (data.error ?? "Classification failed."));
     } catch {
@@ -174,7 +259,7 @@ export default function LessonRoom() {
   const submitTurn = useCallback(
     (text: string, speaker: Speaker) => {
       const trimmed = text.trim();
-      if (!trimmed || !lessonId) return;
+      if (!trimmed || !lessonId || !roleKnown) return;
       const turn: Turn = {
         id: `live-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         speaker,
@@ -184,7 +269,7 @@ export default function LessonRoom() {
       setNotebook((n) => ({ ...n, turns: [...n.turns, turn] }));
       void sendTurn(turn, lessonId);
     },
-    [lessonId, sendTurn],
+    [lessonId, sendTurn, roleKnown],
   );
 
   const onSpeech = useCallback(
@@ -203,7 +288,7 @@ export default function LessonRoom() {
      browser cannot know, so it comes from what the user says their own role is:
      this device is `myRole`, and the other end is the other role. */
   const transcription = useLiveTranscription({
-    enabled: Boolean(session),
+    enabled: Boolean(session) && roleKnown,
     muted: !micOn,
     /* Each device transcribes its own microphone and nothing else.
        Transcribing both streams meant both people transcribed both voices, so
@@ -281,6 +366,104 @@ export default function LessonRoom() {
         : null,
     );
   }, []);
+
+  /* Captures ride the same session as the board, on their own channel.
+     Identifies this browser so its own messages, which come back to it, are
+     ignored the way the board's are. */
+  /* Identifies this browser, so its own signals - which come back to it - are
+     ignored the way the board ignores its own. Made on first use rather than
+     during a render, because a render must be able to run twice and give the
+     same answer. */
+  const clientIdRef = useRef<string | null>(null);
+  const myClientId = useCallback(
+    () => (clientIdRef.current ??= Math.random().toString(36).slice(2, 10)),
+    [],
+  );
+  /* Kept beside the state rather than derived from it: a peer arriving
+     mid-lesson asks what has been taped in, and the handler answering that must
+     not be torn down and rebuilt every time a capture lands - a multi-part
+     picture still arriving would lose the pieces already collected. */
+  const capturesRef = useRef<Capture[]>([]);
+
+  const applyCaptures = useCallback(
+    (update: (current: Capture[]) => Capture[]) => {
+      const next = update(capturesRef.current);
+      if (next === capturesRef.current) return;
+      capturesRef.current = next;
+      setCaptures(next);
+    },
+    [],
+  );
+
+  /* What the page tapes into the margin: the drawings kept with the lesson,
+     plus whatever has been captured or received since it loaded. Reopening a
+     lesson brings the whiteboard cards back; the camera stills are gone, which
+     is the promise the app makes about them. */
+  const shownCaptures = useMemo(() => {
+    const live = new Set(captures.map((c) => c.id));
+    return [...notebook.captures.filter((c) => !live.has(c.id)), ...captures];
+  }, [notebook.captures, captures]);
+
+  const addCapture = useCallback(
+    (incoming: Capture) => {
+      applyCaptures((c) =>
+        c.some((existing) => existing.id === incoming.id) ? c : [...c, incoming],
+      );
+    },
+    [applyCaptures],
+  );
+
+  const sendCapture = useCallback(
+    (capture: Capture) => {
+      const api = roomApi.current;
+      if (!api) return;
+      for (const part of encode({ kind: "capture", from: myClientId(), capture })) {
+        api.signal(CAPTURE_SIGNAL, part);
+      }
+    },
+    [myClientId],
+  );
+
+  /* Someone arriving mid-lesson asks for what has already been taped in, the
+     same way the board is asked for. Without it, joining late means an empty
+     margin beside a notebook that plainly refers to a drawing. */
+  useEffect(() => {
+    const api = roomApi.current;
+    if (!api || !session) return;
+
+    /* One decoder for as long as the room lasts. The effect no longer depends
+       on the captures themselves, so a multi-part picture mid-flight is not
+       thrown away every time one lands. */
+    const decode = createDecoder<CaptureMessage>();
+    const stopListening = api.onSignal(CAPTURE_SIGNAL, (raw) => {
+      const message = decode(raw);
+      if (!message || message.from === myClientId()) return;
+      if (message.kind === "capture") addCapture(message.capture);
+      else if (message.kind === "all") message.captures.forEach(addCapture);
+      else if (message.kind === "hello") {
+        const mine = capturesRef.current;
+        if (mine.length === 0) return;
+        for (const part of encode({ kind: "all", from: myClientId(), captures: mine })) {
+          api.signal(CAPTURE_SIGNAL, part);
+        }
+      }
+    });
+
+    const stopGreeting = api.onPeerJoined(() => {
+      for (const part of encode({ kind: "hello", from: myClientId() })) {
+        api.signal(CAPTURE_SIGNAL, part);
+      }
+    });
+
+    for (const part of encode({ kind: "hello", from: myClientId() })) {
+      api.signal(CAPTURE_SIGNAL, part);
+    }
+
+    return () => {
+      stopListening();
+      stopGreeting();
+    };
+  }, [session, boardSync, addCapture, myClientId]);
 
   const handleStreams = useCallback((next: RoomStreams) => setStreams(next), []);
 
@@ -418,28 +601,51 @@ export default function LessonRoom() {
       return;
     }
 
+    /* Shrunk once, here, and the smaller picture is what gets taped in as well
+       as what gets sent - so both people are looking at the same image, and the
+       one on the page is the one that travelled. */
+    const shared = await shrinkCapture(dataUrl);
+
     let duplicate = false;
-    setCaptures((c) => {
+    const entry: Capture = {
+      id: `capture-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      dataUrl: shared,
+      kind: onBoard ? "whiteboard" : "camera",
+    };
+
+    applyCaptures((c) => {
       // A double-tap grabs the same image twice; the second adds nothing.
-      duplicate = c.some((existing) => existing.dataUrl === dataUrl);
-      return duplicate
-        ? c
-        : [
-            ...c,
-            {
-              id: `capture-${Date.now()}`,
-              dataUrl,
-              kind: onBoard ? ("whiteboard" as const) : ("camera" as const),
-            },
-          ];
+      duplicate = c.some((existing) => existing.dataUrl === shared);
+      return duplicate ? c : [...c, entry];
     });
+
+    if (!duplicate) {
+      /* The other person is in this lesson too. A snapshot that stayed in the
+         browser that took it meant the tutor could draw on the board, watch the
+         learner tape it in, and never see the note they had just made. */
+      sendCapture(entry);
+
+      /* A drawing is kept with the lesson; a still of someone's face is not.
+         The learner's notebook is reopened later, and the whiteboard card
+         should be on the page when it is. */
+      if (onBoard && lessonId) {
+        void fetch("/api/capture", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lessonId, id: entry.id, dataUrl: shared }),
+        }).catch(() => {
+          /* Failing to store it costs the card on a later visit, never the card
+             in front of the two people who are in the lesson now. */
+        });
+      }
+    }
 
     setStatus(
       duplicate
         ? "That is the same image as the last capture."
         : onBoard
-          ? "Whiteboard taped into the notebook."
-          : "Frame taped into the notebook.",
+          ? "Whiteboard taped into both notebooks."
+          : "Frame taped into both notebooks.",
     );
   }
 
@@ -671,13 +877,44 @@ export default function LessonRoom() {
           )
         }
         notes={
+          /* The phone's bottom bar is already four places wide and a fifth would
+             not be a thumb's reach, so the tutor's two documents share the Notes
+             tab and a switch at the top of it - the same two things the desk
+             layout puts in its tab strip. */
           myRole === "tutor" ? (
-            <TutorView notebook={notebook} learnerId={lessonLearnerId} />
+            <div className="flex-1 min-w-0 flex flex-col gap-3">
+              <div className="flex gap-1.5">
+                {(["todo", "notes"] as const).map((which) => (
+                  <button
+                    key={which}
+                    type="button"
+                    onClick={() => setPanel(which)}
+                    className={`rounded-lg px-3 py-1.5 text-[12px] border ${
+                      panel === which
+                        ? "border-accent/50 bg-accent-bg/50 text-accent"
+                        : "border-panel-edge bg-panel text-on-desk-soft"
+                    }`}
+                  >
+                    {which === "todo" ? "To deal with" : "Their notebook"}
+                  </button>
+                ))}
+              </div>
+              {panel === "notes" ? (
+                <NotebookPage
+                  notebook={notebook}
+                  previous={previous}
+                  captures={shownCaptures}
+                  date={lessonDate}
+                />
+              ) : (
+                <TutorView notebook={notebook} learnerId={lessonLearnerId} />
+              )}
+            </div>
           ) : (
             <NotebookPage
               notebook={notebook}
               previous={previous}
-              captures={captures}
+              captures={shownCaptures}
               date={lessonDate}
             />
           )
@@ -764,7 +1001,10 @@ export default function LessonRoom() {
         <div className="hidden lg:flex min-h-0 flex-col gap-2">
           {!pack && (
             <div className="flex gap-1.5 shrink-0">
-              {(["notes", "whiteboard"] as const).map((tab) => (
+              {(myRole === "tutor"
+                ? (["todo", "notes", "whiteboard"] as const)
+                : (["notes", "whiteboard"] as const)
+              ).map((tab) => (
                 <button
                   key={tab}
                   type="button"
@@ -775,7 +1015,7 @@ export default function LessonRoom() {
                       : "border-panel-edge bg-panel text-on-desk-soft"
                   }`}
                 >
-                  {tab === "notes" && myRole === "tutor" ? "lesson" : tab}
+                  {tab === "todo" ? "to deal with" : tab}
                 </button>
               ))}
               {panel === "whiteboard" && (
@@ -802,21 +1042,28 @@ export default function LessonRoom() {
                 >
                   <Whiteboard onReady={handleBoardReady} sync={boardSync} />
                 </div>
+                {/* Only the tutor's, and only mounted for them: it fetches the
+                    learner's history, which the learner's own page never asks for. */}
+                {myRole === "tutor" && (
+                  <div
+                    className={`absolute inset-0 overflow-y-auto ${
+                      panel === "todo" ? "" : "hidden"
+                    }`}
+                  >
+                    <TutorView notebook={notebook} learnerId={lessonLearnerId} />
+                  </div>
+                )}
                 <div
                   className={`absolute inset-0 overflow-y-auto ${
                     panel === "notes" ? "" : "hidden"
                   }`}
                 >
-                  {myRole === "tutor" ? (
-                    <TutorView notebook={notebook} learnerId={lessonLearnerId} />
-                  ) : (
-                    <NotebookPage
-                      notebook={notebook}
-                      previous={previous}
-                      captures={captures}
-                      date={lessonDate}
-                    />
-                  )}
+                  <NotebookPage
+                    notebook={notebook}
+                    previous={previous}
+                    captures={shownCaptures}
+                    date={lessonDate}
+                  />
                 </div>
               </>
             )}

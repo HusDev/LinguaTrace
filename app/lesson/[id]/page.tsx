@@ -11,9 +11,9 @@ export const dynamic = "force-dynamic";
  * One lesson, kept.
  *
  * The same notebook the learner watched fill during the call, rendered from
- * storage instead of live state. Camera captures are absent by design - they are
- * a person's face and were never written down - so the page shows the notes, the
- * words, and anything drawn on the whiteboard.
+ * storage instead of live state. Whiteboard snapshots taped in during the
+ * lesson are here; camera captures are absent by design - they are a person's
+ * face and were never written down.
  */
 export default async function LessonRecord({
   params,
@@ -74,7 +74,7 @@ export default async function LessonRecord({
         <NotebookPage
           notebook={notebook}
           previous={previous}
-          captures={[]}
+          captures={notebook.captures}
           date={date}
         />
       </div>

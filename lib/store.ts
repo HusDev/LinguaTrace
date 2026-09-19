@@ -115,6 +115,43 @@ export function reassignLesson(lessonId: string, learnerId: string, name: string
   saveNotebook(held.notebook, learnerId);
 }
 
+/**
+ * One lesson, one writer at a time.
+ *
+ * Both people in a lesson post their turns to the same endpoint, and both are
+ * folded into the same in-memory notebook. `processTurn` reads that notebook -
+ * the context window, the recent learner turns, the open mistakes - across
+ * several awaits and then writes to it, so two turns arriving together could
+ * each read the state the other was midway through changing: a correction
+ * judged against a transcript that did not yet contain the sentence it
+ * corrected, or two turns appended in the order their judgments happened to
+ * finish rather than the order they were spoken.
+ *
+ * This serialises the folding, not the judging. Each turn still costs one round
+ * trip, so the queue never grows faster than the lesson does.
+ */
+const writing = new Map<string, Promise<unknown>>();
+
+export function withLesson<T>(lessonId: string, work: () => Promise<T>): Promise<T> {
+  // Runs on either outcome, so one failed turn does not block every turn behind it.
+  const queued = (writing.get(lessonId) ?? Promise.resolve()).then(work, work);
+
+  const settled = queued.then(
+    () => undefined,
+    () => undefined,
+  );
+  writing.set(lessonId, settled);
+
+  /* Dropped once the lesson's queue has drained, so a server that has seen
+     thousands of lessons is not still holding a promise for each of them. The
+     identity check leaves a queue alone if another turn has already joined it. */
+  void settled.then(() => {
+    if (writing.get(lessonId) === settled) writing.delete(lessonId);
+  });
+
+  return queued;
+}
+
 /** Persist the lesson as it stands. Called after every judged turn. */
 export function persist(lessonId: string): void {
   const held = live.get(lessonId);

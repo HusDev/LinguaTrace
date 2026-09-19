@@ -89,6 +89,17 @@ function db(): DatabaseSync {
       PRIMARY KEY (lesson_id, id)
     );
 
+    -- Whiteboard snapshots taped into the notes. Camera stills never land here:
+    -- a drawing belongs to the lesson, a still of someone's face is a different
+    -- promise, and the column simply has nowhere to put one.
+    CREATE TABLE IF NOT EXISTS capture (
+      id         TEXT NOT NULL,
+      lesson_id  TEXT NOT NULL REFERENCES lesson(id),
+      data_url   TEXT NOT NULL,
+      seq        INTEGER NOT NULL,
+      PRIMARY KEY (lesson_id, id)
+    );
+
     CREATE TABLE IF NOT EXISTS entry (
       id           TEXT NOT NULL,
       lesson_id    TEXT NOT NULL REFERENCES lesson(id),
@@ -363,6 +374,16 @@ export function saveNotebook(notebook: Notebook, learnerId: string): void {
   try {
     handle.prepare(`DELETE FROM turn WHERE lesson_id = ?`).run(notebook.lessonId);
     handle.prepare(`DELETE FROM entry WHERE lesson_id = ?`).run(notebook.lessonId);
+    handle.prepare(`DELETE FROM capture WHERE lesson_id = ?`).run(notebook.lessonId);
+
+    const captureStmt = handle.prepare(
+      `INSERT INTO capture (id, lesson_id, data_url, seq) VALUES (?, ?, ?, ?)`,
+    );
+    notebook.captures.forEach((capture, i) => {
+      // Only drawings are kept, whatever the caller thought it was handing over.
+      if (capture.kind !== "whiteboard") return;
+      captureStmt.run(capture.id, notebook.lessonId, capture.dataUrl, i);
+    });
 
     const turnStmt = handle.prepare(
       `INSERT INTO turn (id, lesson_id, speaker, text, at, seq) VALUES (?, ?, ?, ?, ?, ?)`,
@@ -464,6 +485,15 @@ export function loadNotebook(lessonId: string): Notebook | null {
     goals: [],
     practiceTopics: [],
     processedTurnIds: turns.map((t) => t.id),
+    captures: (
+      handle
+        .prepare(`SELECT * FROM capture WHERE lesson_id = ? ORDER BY seq`)
+        .all(lessonId) as Array<Record<string, string | number>>
+    ).map((r) => ({
+      id: String(r.id),
+      dataUrl: String(r.data_url),
+      kind: "whiteboard" as const,
+    })),
   };
 
   for (const row of rows) {

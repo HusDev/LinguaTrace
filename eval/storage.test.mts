@@ -24,9 +24,12 @@ const {
   createLessonRow,
   getLessonParticipants,
   listLessons,
+  loadNotebook,
+  saveNotebook,
   setLessonLearner,
   upsertLearner,
 } = await import("../lib/db");
+const { emptyNotebook } = await import("../lib/types");
 
 let failed = 0;
 function check(name: string, condition: boolean, detail?: string) {
@@ -87,6 +90,36 @@ check(
   !listLessons(tutorId).some((l) => l.id === "lesson-x"),
 );
 check("an unknown lesson has no owner", getLessonParticipants("nope") === null);
+
+console.log("\nkeeping captures");
+/* A drawing belongs to the lesson and is kept; a still of someone's face is a
+   different promise, so the column has nowhere to put one. The rule is enforced
+   at the point of writing rather than trusted to every caller. */
+const captured = {
+  ...emptyNotebook("lesson-cap", "Ana", "Mark"),
+  captures: [
+    { id: "board-1", dataUrl: "data:image/jpeg;base64,AAAA", kind: "whiteboard" as const },
+    { id: "face-1", dataUrl: "data:image/jpeg;base64,BBBB", kind: "camera" as const },
+  ],
+};
+saveNotebook(captured, learnerId);
+const reopened = loadNotebook("lesson-cap");
+check(
+  "a whiteboard snapshot is still there when the lesson is reopened",
+  reopened?.captures.length === 1 && reopened.captures[0].id === "board-1",
+  JSON.stringify(reopened?.captures),
+);
+check(
+  "a camera still was never written down",
+  !reopened?.captures.some((c) => c.id === "face-1"),
+);
+
+/* Saving twice must not double them: the write replaces rather than appends. */
+saveNotebook(captured, learnerId);
+check(
+  "saving again does not tape the same drawing in twice",
+  loadNotebook("lesson-cap")?.captures.length === 1,
+);
 
 rmSync(dir, { recursive: true, force: true });
 console.log(`\n${failed === 0 ? "all storage checks passed" : `${failed} failed`}\n`);

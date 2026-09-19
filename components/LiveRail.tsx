@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import type { Notebook, Speaker, Turn } from "@/lib/types";
 import { practiceItems, settledShare } from "@/lib/derive";
 
@@ -154,9 +154,22 @@ export function LiveRail(props: RailProps) {
   const nameFor = (turn: Turn) =>
     turn.speaker === "tutor" ? notebook.tutorName : notebook.learnerName;
 
+  /* The transcript scrolls inside its own box, so a long lesson does not push
+     the rest of the rail off the screen. Left alone it would also sit on the
+     first turn of the lesson while the talking happened out of sight, so it
+     follows the newest turn - unless the reader has scrolled back, in which
+     case they are reading and should be left where they are. */
+  const scroller = useRef<HTMLDivElement | null>(null);
+  const pinned = useRef(true);
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el || !pinned.current) return;
+    el.scrollTop = el.scrollHeight;
+  }, [notebook.turns, interim, outcomes]);
+
   return (
-    <aside className="flex flex-col gap-3 min-h-0">
-      <section className="rounded-2xl border border-panel-edge bg-panel p-3.5">
+    <aside className="flex-1 min-h-0 flex flex-col gap-3">
+      <section className="shrink-0 rounded-2xl border border-panel-edge bg-panel p-3.5">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-[11px] uppercase tracking-[0.14em] text-on-desk-soft">
             Live lesson
@@ -221,7 +234,15 @@ export function LiveRail(props: RailProps) {
 
       {/* Transcript */}
       <section className="rounded-2xl border border-panel-edge bg-panel p-3.5 flex-1 min-h-0 flex flex-col">
-        <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+        <div
+          ref={scroller}
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            pinned.current =
+              el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+          }}
+          className="flex-1 overflow-y-auto space-y-3 pr-1"
+        >
           {notebook.turns.length === 0 && (
             <p className="text-sm text-on-desk-soft">
               {!started
@@ -292,7 +313,7 @@ export function LiveRail(props: RailProps) {
       </section>
 
       {/* To practise */}
-      <section className="rounded-2xl border border-panel-edge bg-panel p-3.5">
+      <section className="shrink-0 rounded-2xl border border-panel-edge bg-panel p-3.5">
         <div className="flex items-center justify-between mb-2.5">
           <h2 className="text-[11px] uppercase tracking-[0.14em] text-on-desk-soft">
             To practise

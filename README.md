@@ -137,6 +137,16 @@ never shown to the person who could act on it. The drills are fixed per error
 type rather than generated, because a suggestion a tutor glances at and runs
 should be the same every time, and inventing exercises would be the app teaching.
 
+**The tutor can also read the notebook itself.** The two views started as an
+either/or, and that was a mistake: answering the tutor's question is not a
+reason to hide the learner's page from them. The notebook is what the learner
+keeps, and it is what the tutor is writing into by teaching - not being able to
+look at it meant a tutor could correct a sentence and never see how it was
+written down. So the tutor's panel has three places, **To deal with**, **Notes**
+and **Whiteboard**, and opens on the first, because that is the one with
+something to act on. The learner has no use for the tutor's view and does not
+get it; the notebook is the same page for both.
+
 It is one switch rather than two because being the tutor and seeing the tutor's
 view are the same thing from the person's point of view. Setting it also decides
 which audio stream is transcribed as whom, which matters: a tutor filed as a
@@ -147,7 +157,10 @@ learner is never asked whether they just corrected something.
 Tutors draw during lessons - verb tables, timelines, sentence diagrams - and that
 drawing is part of what the learner should keep. The right-hand panel switches
 between **Notes** and **Whiteboard**, and one Capture button tapes in whichever
-is showing: the board when it is open, the camera otherwise. Two capture buttons
+is showing: the board when it is open, the camera otherwise. A tutor's Notes
+panel holds their two documents behind one switch - what is still to deal with,
+and the learner's notebook - because a phone's bottom bar is already four places
+wide and a fifth would not be a thumb's reach. Two capture buttons
 would make the user work out which one they wanted.
 
 The board is a working surface, not a record. It is freeform, nothing on it is
@@ -177,13 +190,13 @@ rather than read from the environment when it runs. A runtime secret would never
 reach it: pass it as a build argument (`--build-arg`) or the deployed app shows
 the watermark even though the key is set.
 
-## The gate: two narrow questions
+## The gate: narrow questions, asked separately
 
 A live call carries more than the lesson. People test the microphone, read the
 screen aloud, talk to someone else in the room, and talk about the app itself.
 Every turn is therefore gated before it is judged.
 
-The gate is **two** questions, and it took three attempts to get there:
+The gate began as **two** questions, and it took three attempts to get there:
 
 1. *Is this person speaking to the other participant?* Subject matter is
    explicitly irrelevant.
@@ -205,16 +218,57 @@ aside writes a language error into the learner's notebook that they never made.
 Both regressions are in the evaluation set, which scores this signal at the
 threshold the app actually uses rather than a generic one.
 
+### And a third question, about the transcript rather than the speaker
+
+A learner turn is asked one more thing: *does this read as the recogniser's
+mistake rather than the speaker's?* It is the same veto shape as the tool-talk
+question, and it exists because the notebook's worst failure had a cause nothing
+in the question set could see.
+
+A mis-heard word arrives looking exactly like a lexical error. "It was very
+delisherous" is not a learner choosing the wrong word; it is a microphone, a
+room and a network between the learner and the transcript. Asked to judge it,
+the error question answered 0.94 - correctly, on the text it was given - and the
+learner read an accusation about a sentence they never said. Wrong notes of this
+kind are not bad judgment; they are good judgment applied to bad input.
+
+So the question asks about the text, not the person, and a confident yes
+withholds the language error alone. The turn is still lesson speech, still in the
+transcript, and says what happened: "heard, but the transcript looks garbled".
+Withholding the whole turn would hide the lesson; asserting the error would blame
+the learner for the microphone.
+
+It is a recall trade, and deliberately so. A strong accent produces transcripts
+that genuinely look garbled, so this will occasionally suppress a real error for
+exactly the learners who make most. Losing a note costs one note; inventing one
+costs the learner's trust in the page.
+
 ## Saying so when nothing is written
 
 Every turn in the transcript carries what the classifier decided - "mistake
-noted", "heard, nothing to note", "not lesson speech" - including, and especially,
-the turns that produced nothing.
+noted", "heard, nothing to note", "not lesson speech", "heard, but the transcript
+looks garbled", "not judged in time" - including, and especially, the turns that
+produced nothing.
 
 This is not a debug view. A notebook that fills only on corrections is silent
 through most of a good lesson, and silence is indistinguishable from failure: the
 app looked broken for exactly as long as it had no way to say "I heard that, and
 there was nothing to write down."
+
+### Two scales that do not compare
+
+Every entry carries the number that produced it, and for a while some of those
+numbers were the wrong kind. A Noul returns a calibrated probability - the chance
+the answer is yes. A Choice returns confidence, which is how concentrated the
+distribution over the options is, and falls simply because there are more options
+to spread across: a pick among twenty-four vocabulary candidates looks less
+certain than a three-way choice that means less. The model's own guidance says
+the two are not comparable and that thresholds must not be carried between them.
+
+So the band an entry is shown in now always comes from the calibrated judgment
+that decided the entry should exist. A Choice confidence is only ever a floor on
+whether a selected span is safe to quote, which is a different question with its
+own constant.
 
 ## The design rule: Jev judges, code writes
 
@@ -286,10 +340,10 @@ Vonage room (stubbed)  ->  transcript turns
                                 v
                      POST /api/classify
                                 |
-                 pass 1: Jev judges the turn        one request, questions batched
+            judgments          selections            two requests, sent together:
+        Jev judges the turn  /  picks the spans      one round trip per turn
                                 |
-                 pass 2 (only when earned):          a second request is justified
-                   pair correction / select term     only by needing pass 1's answer
+                    both answered before anything is written
                                 |
                                 v
                    lib/notebook.ts  - thresholds, pairing, de-duplication
@@ -302,6 +356,27 @@ Vonage room (stubbed)  ->  transcript turns
                    lib/lessonPack.ts - summary, flashcards,
                    gap-fills built from the learner's own corrections
 ```
+
+A turn costs **one round trip**, not five. The selections used to be a second
+pass, made after the judgments and justified by needing their answers. They did
+not need them: every candidate span is enumerated in code from the transcript, so
+nothing about them waits on a judgment - the judgments decide only which
+selections the notebook goes on to read. So they are asked speculatively, with
+their premises stated in the question, and sent alongside pass 1 rather than
+after it. They stay two requests rather than one because the judgments read a
+small, clean state, and accuracy falls as a state grows with material irrelevant
+to the question being asked.
+
+The one thing that genuinely needs an earlier answer is the vocabulary gloss,
+which has to know which word was chosen. It runs after the word is already on the
+page rather than in front of it: waiting on a dictionary before showing a word
+the tutor has just said aloud made a slow lookup into a slow notebook.
+
+Every turn is judged under a single deadline covering all of its requests. The
+model client's timeout is per attempt, and with retries a call could occupy some
+twenty-five seconds; a lesson could run minutes ahead of its own notebook with
+nothing to say why. A turn that runs out of time says so in the transcript -
+"not judged in time" - rather than going quiet.
 
 | File | Responsibility |
 | --- | --- |
@@ -317,6 +392,8 @@ Vonage room (stubbed)  ->  transcript turns
 | `components/LiveRail.tsx` | The call: controls, video, transcript, practice list |
 | `components/VideoRoom.tsx` | The video call, connected with a session-scoped token |
 | `components/Whiteboard.tsx` | The shared drawing surface, and its snapshot export |
+| `lib/boardSync.ts` | The board and the captures over the lesson's own session |
+| `lib/captureImage.ts` | Shrinking a capture to something that can be sent |
 | `eval/` | The evaluation harness and its labelled dataset |
 
 Policy lives apart from the questions on purpose: changing a threshold is a code
@@ -339,12 +416,30 @@ wants before the next lesson starts.
 Lessons are written through after every judged turn, so a refresh mid-lesson
 resumes rather than starting over, and a lesson survives the server restarting.
 
-**Camera captures are deliberately not stored.** A whiteboard snapshot is a
-drawing; a video still is a person's face, and keeping those indefinitely is a
-different promise from keeping their notes. Captures live in the page for the
-length of the lesson and are gone on refresh. The whiteboard persists as its
-tldraw document - vector, small, reopenable - with images derived from it rather
-than stored.
+**Captures are shared, and only drawings are kept.** A snapshot taped into the
+notes is part of the lesson both people are in, so it goes to both of them over
+the session the board already rides - it used to exist only in the browser that
+pressed the button, which meant a tutor could draw something, watch the learner
+tape it in, and never see the note they had just made. Someone joining
+mid-lesson asks for what is already taped in, the same way they ask for the
+board.
+
+What is stored is a narrower question than what is shared. **A whiteboard
+snapshot is kept; a camera capture is not.** A drawing belongs to the lesson; a
+video still is a person's face, and keeping those indefinitely is a different
+promise from keeping their notes - sharing one with the person already looking
+at that face on a call is not the same as writing it down. So whiteboard cards
+are on the page when a lesson is reopened and camera stills are gone on refresh,
+and the rule is enforced where the write happens rather than trusted to every
+caller. The board itself still persists as its tldraw document - vector, small,
+reopenable - and a taped snapshot is a photograph of it at one moment, which is
+a different thing and cannot be re-derived.
+
+A capture is shrunk once, when it is taken, and the smaller picture is both what
+is taped in and what is sent. A frame off a video element is a megabyte or two;
+signals carry 8KB, so an untouched capture would be hundreds of them in a burst.
+The card it renders into is a few hundred pixels wide, so the full resolution
+was never visible to anyone.
 
 Storage is SQLite through Node's built-in driver, so the app needs no service to
 run. Every query lives in `lib/db.ts` and returns plain objects; moving to

@@ -77,7 +77,12 @@ interface Pipeline {
   node: AudioWorkletNode;
   source: MediaStreamAudioSourceNode;
   /** A finalised fragment waiting to see whether the speaker continues. */
-  held: { text: string; timer: ReturnType<typeof setTimeout> } | null;
+  held: {
+    text: string;
+    timer: ReturnType<typeof setTimeout>;
+    /** When the first fragment of this run arrived, for the total-hold ceiling. */
+    startedAt: number;
+  } | null;
 }
 
 export interface TranscriptionStreams {
@@ -160,7 +165,15 @@ export function useLiveTranscription({
     if (pipeline.held && continuesTurn(pipeline.held.text, text)) {
       clearTimeout(pipeline.held.timer);
       const merged = joinFragments(pipeline.held.text, text);
-      pipeline.held = { text: merged, timer: setTimeout(flush, holdFor(merged)) };
+      /* The window restarts, but the run as a whole does not: the ceiling is
+         measured from the first fragment, so a speaker who never lands on a
+         full stop is still judged rather than held forever. */
+      const { startedAt } = pipeline.held;
+      pipeline.held = {
+        text: merged,
+        startedAt,
+        timer: setTimeout(flush, holdFor(merged, Date.now() - startedAt)),
+      };
       return;
     }
 
@@ -171,7 +184,11 @@ export function useLiveTranscription({
       finalRef.current(speaker, previous);
     }
 
-    pipeline.held = { text, timer: setTimeout(flush, holdFor(text)) };
+    pipeline.held = {
+      text,
+      startedAt: Date.now(),
+      timer: setTimeout(flush, holdFor(text)),
+    };
   }, []);
 
   /** Close a speaker's pipeline without deciding whether it should come back. */

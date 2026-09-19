@@ -14,7 +14,8 @@
         "text": "Yesterday I go to the office."
       },
       "expect": {
-        "contains_error": true
+        "contains_error": true,
+        "is_asr_artefact": false
       }
     },
     {
@@ -47,7 +48,8 @@
         "text": "My manager asked me to present the numbers to the team."
       },
       "expect": {
-        "contains_error": false
+        "contains_error": false,
+        "is_asr_artefact": false
       }
     },
     {
@@ -316,6 +318,398 @@
       },
       "expect": {
         "flags_practice_need": false
+      }
+    },
+    {
+      "id": "garbled-transcript-is-not-a-learner-error",
+      "context": [
+        {
+          "speaker": "tutor",
+          "text": "So tell me what you did at the weekend."
+        }
+      ],
+      "turn": {
+        "speaker": "learner",
+        "text": "I went to the the beach with my my brumber and we"
+      },
+      "expect": {
+        "is_lesson_speech": true,
+        "contains_error": false,
+        "is_asr_artefact": true
+      }
+    },
+    {
+      "id": "invented-word-is-not-a-word-choice-error",
+      "context": [
+        {
+          "speaker": "tutor",
+          "text": "And how was the food?"
+        }
+      ],
+      "turn": {
+        "speaker": "learner",
+        "text": "It was very delisherous and the sauce was flenty."
+      },
+      "expect": {
+        "is_lesson_speech": true,
+        "contains_error": false,
+        "is_asr_artefact": true
+      }
+    },
+    {
+      "id": "cut-off-mid-word-is-not-an-error",
+      "context": [
+        {
+          "speaker": "tutor",
+          "text": "What are you working on at the moment?"
+        }
+      ],
+      "turn": {
+        "speaker": "learner",
+        "text": "I am building a new fea"
+      },
+      "expect": {
+        "is_lesson_speech": true,
+        "contains_error": false,
+        "is_asr_artefact": true
+      }
+    },
+    {
+      "id": "a-real-error-is-not-mistaken-for-a-mishearing",
+      "context": [
+        {
+          "speaker": "tutor",
+          "text": "Have you finished the report?"
+        }
+      ],
+      "turn": {
+        "speaker": "learner",
+        "text": "Yes, I have went through all of it yesterday."
+      },
+      "expect": {
+        "is_lesson_speech": true,
+        "contains_error": true,
+        "learner_error_type": "verb_tense",
+        "is_asr_artefact": false
+      }
+    },
+    {
+      "id": "accented-but-correct-is-not-an-error",
+      "context": [
+        {
+          "speaker": "tutor",
+          "text": "Tell me about your team."
+        }
+      ],
+      "turn": {
+        "speaker": "learner",
+        "text": "We are six people and we all work on the same product."
+      },
+      "expect": {
+        "is_lesson_speech": true,
+        "contains_error": false,
+        "learner_error_type": "no_error",
+        "is_asr_artefact": false
+      }
+    },
+    {
+      "id": "correct-sentence-gets-no-error-type",
+      "context": [
+        {
+          "speaker": "tutor",
+          "text": "What did you do at the weekend?"
+        }
+      ],
+      "turn": {
+        "speaker": "learner",
+        "text": "I visited my parents and we cooked together."
+      },
+      "expect": {
+        "contains_error": false,
+        "learner_error_type": "no_error",
+        "is_asr_artefact": false
+      }
+    },
+    {
+      "id": "elliptical-answer-is-correct-in-context",
+      "context": [
+        {
+          "speaker": "tutor",
+          "text": "Did you finish the presentation?"
+        }
+      ],
+      "turn": {
+        "speaker": "learner",
+        "text": "Yes, last night."
+      },
+      "expect": {
+        "contains_error": false,
+        "learner_error_type": "no_error"
+      }
+    },
+    {
+      "id": "informal-is-not-an-error",
+      "context": [
+        {
+          "speaker": "tutor",
+          "text": "How are you doing today?"
+        }
+      ],
+      "turn": {
+        "speaker": "learner",
+        "text": "Yeah, pretty good thanks, bit tired though."
+      },
+      "expect": {
+        "contains_error": false,
+        "learner_error_type": "no_error"
+      }
+    },
+    {
+      "id": "article-error-is-typed-as-article",
+      "context": [
+        {
+          "speaker": "tutor",
+          "text": "Where do you work?"
+        }
+      ],
+      "turn": {
+        "speaker": "learner",
+        "text": "I work in bank in the centre of the city."
+      },
+      "expect": {
+        "contains_error": true,
+        "learner_error_type": "article"
+      }
+    },
+    {
+      "id": "plural-error-is-typed-as-plural",
+      "context": [
+        {
+          "speaker": "tutor",
+          "text": "How many people are in your family?"
+        }
+      ],
+      "turn": {
+        "speaker": "learner",
+        "text": "I have two childs and one dog."
+      },
+      "expect": {
+        "contains_error": true,
+        "learner_error_type": "plural_form"
+      }
+    },
+    {
+      "id": "agreement-error-is-typed-as-agreement",
+      "context": [
+        {
+          "speaker": "tutor",
+          "text": "Tell me about your brother."
+        }
+      ],
+      "turn": {
+        "speaker": "learner",
+        "text": "He go to university in Madrid."
+      },
+      "expect": {
+        "contains_error": true,
+        "learner_error_type": "agreement"
+      }
+    },
+    {
+      "id": "correction-after-an-intervening-turn",
+      "context": [
+        {
+          "speaker": "learner",
+          "text": "Yesterday I go to the office."
+        },
+        {
+          "speaker": "tutor",
+          "text": "Right, and who did you see?"
+        },
+        {
+          "speaker": "learner",
+          "text": "I see my manager and two colleagues."
+        }
+      ],
+      "turn": {
+        "speaker": "tutor",
+        "text": "I saw my manager. With yesterday, the verb goes into the past."
+      },
+      "expect": {
+        "is_correction": true,
+        "is_grammar_explanation": true,
+        "error_type": "verb_tense"
+      }
+    },
+    {
+      "id": "praise-between-mistakes-is-not-a-correction",
+      "context": [
+        {
+          "speaker": "learner",
+          "text": "I have went there last year."
+        },
+        {
+          "speaker": "tutor",
+          "text": "Good, keep going."
+        }
+      ],
+      "turn": {
+        "speaker": "learner",
+        "text": "It was a very nice trip."
+      },
+      "expect": {
+        "contains_error": false,
+        "learner_error_type": "no_error"
+      }
+    },
+    {
+      "id": "recast-without-explanation-is-still-a-correction",
+      "context": [
+        {
+          "speaker": "learner",
+          "text": "I am agree with you."
+        }
+      ],
+      "turn": {
+        "speaker": "tutor",
+        "text": "I agree with you."
+      },
+      "expect": {
+        "is_correction": true,
+        "is_grammar_explanation": false
+      }
+    },
+    {
+      "id": "repeating-the-learner-approvingly-is-not-a-correction",
+      "context": [
+        {
+          "speaker": "learner",
+          "text": "I went to the office yesterday."
+        }
+      ],
+      "turn": {
+        "speaker": "tutor",
+        "text": "I went to the office yesterday. Exactly right."
+      },
+      "expect": {
+        "is_correction": false
+      }
+    },
+    {
+      "id": "goal-is-quoted-from-its-own-sentence",
+      "context": [
+        {
+          "speaker": "tutor",
+          "text": "How did the interview go?"
+        }
+      ],
+      "turn": {
+        "speaker": "learner",
+        "text": "It went well. Thank you for asking. I want to speak more confidently in meetings."
+      },
+      "expect": {
+        "states_goal": true,
+        "goal_sentence": "I want to speak more confidently in meetings."
+      }
+    },
+    {
+      "id": "practice-note-is-quoted-from-its-own-sentence",
+      "context": [
+        {
+          "speaker": "learner",
+          "text": "That was harder than I expected."
+        }
+      ],
+      "turn": {
+        "speaker": "tutor",
+        "text": "You did well today. Really good effort. Practise the past simple out loud before next week."
+      },
+      "expect": {
+        "flags_practice_need": true,
+        "practice_sentence": "Practise the past simple out loud before next week."
+      }
+    },
+    {
+      "id": "small-talk-before-a-goal-is-not-the-goal",
+      "context": [
+        {
+          "speaker": "tutor",
+          "text": "Good to see you."
+        }
+      ],
+      "turn": {
+        "speaker": "learner",
+        "text": "Good to see you too. My exam is in June and I need to pass the speaking part."
+      },
+      "expect": {
+        "states_goal": true,
+        "goal_sentence": "My exam is in June and I need to pass the speaking part."
+      }
+    },
+    {
+      "id": "phrasal-verb-is-offered-whole",
+      "context": [
+        {
+          "speaker": "learner",
+          "text": "I could not remember the word."
+        }
+      ],
+      "turn": {
+        "speaker": "tutor",
+        "text": "We say 'to draw a blank' when your mind goes completely empty."
+      },
+      "expect": {
+        "introduces_vocabulary": true,
+        "vocabulary_term": "draw a blank"
+      }
+    },
+    {
+      "id": "correcting-a-word-is-not-teaching-it",
+      "context": [
+        {
+          "speaker": "learner",
+          "text": "I made a photo of the whiteboard."
+        }
+      ],
+      "turn": {
+        "speaker": "tutor",
+        "text": "Took a photo, not made a photo."
+      },
+      "expect": {
+        "is_correction": true,
+        "introduces_vocabulary": false
+      }
+    },
+    {
+      "id": "talking-about-work-is-lesson-speech",
+      "context": [
+        {
+          "speaker": "tutor",
+          "text": "What does your company do?"
+        }
+      ],
+      "turn": {
+        "speaker": "learner",
+        "text": "We build software for hospitals, mostly scheduling systems."
+      },
+      "expect": {
+        "is_lesson_speech": true
+      }
+    },
+    {
+      "id": "asking-if-the-notes-are-working-is-not-lesson-speech",
+      "context": [
+        {
+          "speaker": "learner",
+          "text": "I think I said that wrong."
+        }
+      ],
+      "turn": {
+        "speaker": "tutor",
+        "text": "Hold on, is it actually writing any of this down?"
+      },
+      "expect": {
+        "is_lesson_speech": false
       }
     }
   ]

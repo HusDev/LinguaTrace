@@ -14,13 +14,13 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  ASR_ARTEFACT_THRESHOLD,
   CONFIRM_THRESHOLD,
   LESSON_SPEECH_THRESHOLD,
   TENTATIVE_THRESHOLD,
   classifyTurn,
   jevConfigured,
-  pairCorrection,
-  selectVocabulary,
+  selectSpans,
 } from "../lib/jev";
 import type { Speaker, Turn } from "../lib/types";
 
@@ -33,6 +33,7 @@ interface Case {
 
 const SIGNAL_KEYS = [
   "is_lesson_speech",
+  "is_asr_artefact",
   "contains_error",
   "is_correction",
   "introduces_vocabulary",
@@ -45,6 +46,7 @@ type SignalKey = (typeof SIGNAL_KEYS)[number];
 
 const SIGNAL_FIELD: Record<SignalKey, string> = {
   is_lesson_speech: "isLessonSpeech",
+  is_asr_artefact: "isAsrArtefact",
   contains_error: "containsError",
   is_correction: "isCorrection",
   introduces_vocabulary: "introducesVocabulary",
@@ -55,10 +57,20 @@ const SIGNAL_FIELD: Record<SignalKey, string> = {
 
 /* Each signal is scored at the threshold the application actually uses, so a
    pass here means the shipped behaviour is right - not merely that the number
-   leaned the correct way. */
+   leaned the correct way.
+
+   For the note signals that is the tentative floor, not the confirmed one. An
+   entry is written at 0.45 and merely marked unsure; scoring them at 0.75
+   reported a clean sheet while the notebook was filling with hedged notes the
+   lesson did not contain, which is exactly the complaint this set exists to
+   catch. */
 const THRESHOLD: Partial<Record<SignalKey, number>> = {
   is_lesson_speech: LESSON_SPEECH_THRESHOLD,
+  is_asr_artefact: ASR_ARTEFACT_THRESHOLD,
 };
+
+/** What a signal must reach before the notebook writes anything from it. */
+const WRITES_AT = TENTATIVE_THRESHOLD;
 
 interface Tally {
   truePositive: number;
@@ -95,6 +107,7 @@ async function main() {
   );
   const failures: string[] = [];
   const lowConfidence: string[] = [];
+  const durations: number[] = [];
 
   for (const testCase of dataset.cases) {
     const turn: Turn = {
@@ -104,17 +117,27 @@ async function main() {
       at: 0,
     };
 
-    const signals = (await classifyTurn(turn, testCase.context)) as unknown as Record<
-      string,
-      number
-    >;
+    /* Timed together and asked together, exactly as a live turn does it: the
+       judgments and the selections are one round trip, so measuring them apart
+       would report a latency the app never pays. */
+    const started = Date.now();
+    const learnerWindow: Turn[] = testCase.context
+      .filter((c) => c.speaker === "learner")
+      .map((c, i) => ({ id: `${testCase.id}-ctx-${i}`, speaker: c.speaker, text: c.text, at: 0 }));
+
+    const [rawSignals, selections] = await Promise.all([
+      classifyTurn(turn, testCase.context),
+      selectSpans(turn, testCase.context, learnerWindow),
+    ]);
+    durations.push(Date.now() - started);
+    const signals = rawSignals as unknown as Record<string, number>;
 
     for (const key of SIGNAL_KEYS) {
       const expected = testCase.expect[key];
       if (typeof expected !== "boolean") continue;
 
       const probability = signals[SIGNAL_FIELD[key]] ?? 0;
-      const fired = probability >= (THRESHOLD[key] ?? CONFIRM_THRESHOLD);
+      const fired = probability >= (THRESHOLD[key] ?? WRITES_AT);
       const tally = tallies.get(key)!;
 
       if (expected && fired) tally.truePositive += 1;
@@ -139,17 +162,9 @@ async function main() {
       }
     }
 
-    /* Second-pass checks: the pairing and the term selection, where they matter. */
+    /* The selections, which are what the notebook actually quotes. */
     if (typeof testCase.expect.error_type === "string") {
-      const pairing = await pairCorrection(turn, [
-        {
-          id: `${testCase.id}-ctx`,
-          speaker: "learner",
-          text: testCase.context.map((c) => c.text).join(" "),
-          at: 0,
-        },
-      ]);
-      const got = pairing?.errorType ?? "none";
+      const got = selections.correction?.errorType ?? "none";
       if (got !== testCase.expect.error_type) {
         failures.push(
           `TYPE  ${testCase.id} · expected ${testCase.expect.error_type}, got ${got}`,
@@ -158,13 +173,34 @@ async function main() {
     }
 
     if (typeof testCase.expect.vocabulary_term === "string") {
-      const picked = await selectVocabulary(turn);
       const want = testCase.expect.vocabulary_term.toLowerCase();
-      const got = picked?.term.toLowerCase() ?? "none";
+      const got = selections.vocabulary?.term.toLowerCase() ?? "none";
       if (!got.includes(want) && !want.includes(got)) {
         failures.push(
-          `TERM  ${testCase.id} · expected "${testCase.expect.vocabulary_term}", got "${picked?.term ?? "none"}"`,
+          `TERM  ${testCase.id} · expected "${testCase.expect.vocabulary_term}", got "${selections.vocabulary?.term ?? "none"}"`,
         );
+      }
+    }
+
+    /* The escape the unpaired classifier previously did not have. A correct
+       sentence must be answered "no error", not assigned the nearest one. */
+    if (typeof testCase.expect.learner_error_type === "string") {
+      const got = selections.learnerError?.errorType ?? "no_error";
+      if (got !== testCase.expect.learner_error_type) {
+        failures.push(
+          `LERR  ${testCase.id} · expected ${testCase.expect.learner_error_type}, got ${got}`,
+        );
+      }
+    }
+
+    /* Which sentence of a multi-sentence turn gets quoted. */
+    for (const key of ["goal_sentence", "practice_sentence"] as const) {
+      const want = testCase.expect[key];
+      if (typeof want !== "string") continue;
+      const got =
+        (key === "goal_sentence" ? selections.goal : selections.practice) ?? "none";
+      if (got.toLowerCase().trim() !== want.toLowerCase().trim()) {
+        failures.push(`SPAN  ${testCase.id} · ${key} expected "${want}", got "${got}"`);
       }
     }
   }
@@ -178,6 +214,17 @@ async function main() {
     const n = positives + t.trueNegative + t.falsePositive;
     console.log(
       `${key.padEnd(24)} ${rate(t.truePositive, positives)}      ${rate(t.truePositive, fired)}  ${String(n).padStart(3)}`,
+    );
+  }
+
+  /* What a turn costs, which is half of what "is the note-taker any good?"
+     means. A notebook that is right and four sentences behind is not keeping a
+     lesson's notes; it is writing them up afterwards. */
+  if (durations.length > 0) {
+    const sorted = [...durations].sort((a, b) => a - b);
+    const at = (q: number) => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * q))];
+    console.log(
+      `\nPer turn: p50 ${at(0.5)}ms · p95 ${at(0.95)}ms · slowest ${sorted[sorted.length - 1]}ms`,
     );
   }
 

@@ -27,6 +27,20 @@ export interface Turn {
  */
 export type Certainty = "confirmed" | "tentative";
 
+/**
+ * How sure the gate must be that a turn is lesson content before it is judged.
+ *
+ * Here rather than beside the question that produces it, because the transcript
+ * shows what was decided about every turn and so needs the same number the
+ * judgment used. `lib/jev.ts` pulls in the model SDK and a server-side key, so
+ * the page cannot import it; two copies of a threshold that must agree is worse
+ * than one constant in the module both sides already share.
+ */
+export const LESSON_SPEECH_THRESHOLD = 0.6;
+
+/** Above this, the transcript is too suspect to accuse the learner from. */
+export const ASR_ARTEFACT_THRESHOLD = 0.5;
+
 export interface Provenance {
   /** Turns this entry was derived from. */
   turnIds: string[];
@@ -111,6 +125,22 @@ export interface PracticeTopic {
   provenance: Provenance;
 }
 
+/**
+ * A snapshot taped into the notes.
+ *
+ * Only whiteboard drawings are kept. A whiteboard snapshot is a drawing and
+ * belongs to the lesson; a camera capture is a still of a person's face, and
+ * keeping those indefinitely is a different promise from keeping someone's
+ * notes. Camera stills are shared with the other person in the call, who is
+ * already looking at that face, and are gone on refresh.
+ */
+export interface CaptureEntry {
+  id: string;
+  /** A JPEG data URL, already shrunk to something that can be sent. */
+  dataUrl: string;
+  kind: "camera" | "whiteboard";
+}
+
 /** Everything the lesson produced, in the order the UI shows it. */
 export interface Notebook {
   lessonId: string;
@@ -124,6 +154,8 @@ export interface Notebook {
   practiceTopics: PracticeTopic[];
   /** Turn ids already folded in, so replays and retries stay idempotent. */
   processedTurnIds: string[];
+  /** Whiteboard snapshots taped in. Camera stills never reach this. */
+  captures: CaptureEntry[];
 }
 
 export function emptyNotebook(
@@ -142,5 +174,6 @@ export function emptyNotebook(
     goals: [],
     practiceTopics: [],
     processedTurnIds: [],
+    captures: [],
   };
 }

@@ -33,9 +33,27 @@ export const MERGE_WINDOW_MS = 1400;
  */
 export const INCOMPLETE_WINDOW_MS = 7000;
 
-/** How long to hold `text` before it counts as a finished turn. */
-export function holdFor(text: string): number {
-  return endsSentence(text) ? MERGE_WINDOW_MS : INCOMPLETE_WINDOW_MS;
+/**
+ * The longest a run of fragments may be held, however many continuations land.
+ *
+ * The per-fragment window above is restarted every time the speaker carries on,
+ * which is right for joining a sentence back together and wrong as the only
+ * bound: someone who strings clauses together without sentence-final
+ * punctuation - which is most people, and which the model renders faithfully -
+ * resets a seven-second timer indefinitely, and the turn is never judged at all.
+ * So the run also has a ceiling, measured from its first fragment.
+ */
+export const MAX_TOTAL_HOLD_MS = 8000;
+
+/**
+ * How long to hold `text` before it counts as a finished turn.
+ *
+ * `elapsed` is how long the run has already been held. The per-fragment window
+ * still applies, but never past the ceiling on the run as a whole.
+ */
+export function holdFor(text: string, elapsed = 0): number {
+  const window = endsSentence(text) ? MERGE_WINDOW_MS : INCOMPLETE_WINDOW_MS;
+  return Math.max(0, Math.min(window, MAX_TOTAL_HOLD_MS - elapsed));
 }
 
 /** Sentence-final punctuation, which makes a continuation less likely. */
