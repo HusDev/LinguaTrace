@@ -46,3 +46,6 @@ vonage_private.key
 *.key
 
 data/
+
+# Archify visual-check evidence, regenerated on demand
+docs/architecture/*.visual-check.*

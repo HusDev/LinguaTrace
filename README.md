@@ -259,6 +259,11 @@ did not.
 
 ## Architecture
 
+An interactive diagram lives at
+[`docs/architecture/linguatrace.html`](docs/architecture/linguatrace.html) - open
+it in a browser. Its source of truth is the small JSON specification beside it,
+and each component links to the file that implements it.
+
 ```text
 Vonage room (stubbed)  ->  transcript turns
                                 |

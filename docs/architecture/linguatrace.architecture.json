@@ -1,0 +1,429 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "LinguaTrace",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1340,
+      560
+    ],
+    "repository": {
+      "url": "https://github.com/HusDev/LinguaTrace",
+      "provider": "github",
+      "revision": "868231b03843be9b8fb4ccd3a6759b29b6399fa3"
+    },
+    "views": [
+      {
+        "id": "spoken-turn",
+        "label": "A spoken turn",
+        "focus": [
+          "learner",
+          "app",
+          "transcribe",
+          "api",
+          "notebook",
+          "jev"
+        ],
+        "note": "Follow one sentence from the microphone to a line in the notebook."
+      },
+      {
+        "id": "the-room",
+        "label": "The room",
+        "focus": [
+          "tutor",
+          "learner",
+          "app",
+          "vonage",
+          "board"
+        ],
+        "note": "Video and the shared whiteboard both ride the same Vonage session."
+      },
+      {
+        "id": "what-is-kept",
+        "label": "What is kept",
+        "focus": [
+          "notebook",
+          "db",
+          "api",
+          "auth"
+        ],
+        "note": "Lessons and the weakness profile survive the call; camera frames do not."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "tutor",
+      "type": "external",
+      "label": "Tutor",
+      "sublabel": "starts the lesson",
+      "pos": [
+        40,
+        150
+      ],
+      "size": [
+        130,
+        60
+      ]
+    },
+    {
+      "id": "learner",
+      "type": "external",
+      "label": "Learner",
+      "sublabel": "joins by link",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        130,
+        60
+      ]
+    },
+    {
+      "id": "vonage",
+      "type": "cloud",
+      "label": "Vonage Video",
+      "sublabel": "room + signalling",
+      "tag": "server-minted token",
+      "pos": [
+        280,
+        50
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "lib/vonage.ts",
+          "label": "session + client token"
+        }
+      ]
+    },
+    {
+      "id": "app",
+      "type": "frontend",
+      "label": "Lesson room",
+      "sublabel": "Next.js \u00b7 desk and phone",
+      "brand": "next-js",
+      "pos": [
+        280,
+        210
+      ],
+      "size": [
+        170,
+        86
+      ],
+      "sources": [
+        {
+          "path": "app/page.tsx",
+          "label": "lesson room"
+        }
+      ]
+    },
+    {
+      "id": "board",
+      "type": "frontend",
+      "label": "Whiteboard",
+      "sublabel": "tldraw, shared",
+      "pos": [
+        280,
+        400
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "components/Whiteboard.tsx",
+          "label": "shared canvas"
+        }
+      ]
+    },
+    {
+      "id": "transcribe",
+      "type": "external",
+      "label": "Gemini Live",
+      "sublabel": "gemini-3.5-transcribe-live",
+      "brand": "google-gemini",
+      "tag": "never speaks",
+      "pos": [
+        560,
+        50
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "sources": [
+        {
+          "path": "lib/useLiveTranscription.ts",
+          "label": "one session per speaker"
+        }
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "Route handlers",
+      "sublabel": "lesson \u00b7 classify \u00b7 pack",
+      "pos": [
+        560,
+        210
+      ],
+      "size": [
+        170,
+        86
+      ],
+      "sources": [
+        {
+          "path": "app/api/classify/route.ts",
+          "label": "judge a turn"
+        }
+      ]
+    },
+    {
+      "id": "auth",
+      "type": "security",
+      "label": "Accounts",
+      "sublabel": "scrypt \u00b7 httpOnly cookie",
+      "pos": [
+        560,
+        400
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "lib/auth.ts",
+          "label": "sessions and roles"
+        }
+      ]
+    },
+    {
+      "id": "notebook",
+      "type": "backend",
+      "label": "Notebook reducer",
+      "sublabel": "thresholds \u00b7 pairing",
+      "pos": [
+        840,
+        210
+      ],
+      "size": [
+        180,
+        86
+      ],
+      "sources": [
+        {
+          "path": "lib/notebook.ts",
+          "label": "what earns a line"
+        }
+      ]
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "SQLite",
+      "sublabel": "lessons \u00b7 weakness profile",
+      "brand": "sqlite",
+      "tag": "/data volume",
+      "pos": [
+        840,
+        400
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "sources": [
+        {
+          "path": "lib/db.ts",
+          "label": "every query"
+        }
+      ]
+    },
+    {
+      "id": "translate",
+      "type": "external",
+      "label": "Gemini Flash Lite",
+      "sublabel": "vocabulary glosses",
+      "brand": "google-gemini",
+      "pos": [
+        1120,
+        50
+      ],
+      "size": [
+        170,
+        64
+      ],
+      "sources": [
+        {
+          "path": "lib/translate.ts",
+          "label": "the one generated string"
+        }
+      ]
+    },
+    {
+      "id": "jev",
+      "type": "external",
+      "label": "Jev",
+      "sublabel": "TypeSafe System One",
+      "tag": "typed + calibrated",
+      "pos": [
+        1120,
+        210
+      ],
+      "size": [
+        170,
+        86
+      ],
+      "sources": [
+        {
+          "path": "lib/jev.ts",
+          "label": "every question asked"
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Browser",
+      "wraps": [
+        "app",
+        "board"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Fly.io \u00b7 London machine",
+      "wraps": [
+        "api",
+        "auth",
+        "notebook",
+        "db"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "tutor-opens",
+      "from": "tutor",
+      "to": "app",
+      "label": "starts the lesson",
+      "variant": "emphasis",
+      "labelDy": 24
+    },
+    {
+      "id": "learner-joins",
+      "from": "learner",
+      "to": "app",
+      "label": "joins by link"
+    },
+    {
+      "id": "room",
+      "from": "app",
+      "to": "vonage",
+      "label": "video + board signals",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "draw",
+      "from": "board",
+      "to": "app",
+      "label": "draw",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "listen",
+      "from": "app",
+      "to": "transcribe",
+      "label": "audio per speaker",
+      "labelDy": -30
+    },
+    {
+      "id": "turns",
+      "from": "app",
+      "to": "api",
+      "label": "finalised turns",
+      "variant": "emphasis",
+      "labelDy": 18
+    },
+    {
+      "id": "session",
+      "from": "api",
+      "to": "auth",
+      "label": "who is asking",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    },
+    {
+      "id": "judge",
+      "from": "api",
+      "to": "notebook",
+      "label": "judge the turn"
+    },
+    {
+      "id": "ask",
+      "from": "notebook",
+      "to": "jev",
+      "label": "typed questions",
+      "variant": "emphasis",
+      "labelDy": 18
+    },
+    {
+      "id": "gloss",
+      "from": "notebook",
+      "to": "translate",
+      "label": "gloss vocabulary",
+      "variant": "dashed",
+      "labelDy": -30
+    },
+    {
+      "id": "keep",
+      "from": "notebook",
+      "to": "db",
+      "label": "write through, every turn",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "The room",
+      "items": [
+        "Vonage carries the video and the shared whiteboard on one session",
+        "Each speaker is transcribed on their own stream, so a turn is never attributed by voice"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Judging",
+      "items": [
+        "Jev returns typed answers with calibrated probabilities",
+        "Code enumerates candidates from the transcript; the model only selects",
+        "A gate drops anything aimed at the app rather than the lesson"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "What is kept",
+      "items": [
+        "Lessons write through after every judged turn, so a restart resumes",
+        "The weakness profile is the claim no in-memory version could make",
+        "Camera frames are deliberately never stored"
+      ]
+    }
+  ]
+}
