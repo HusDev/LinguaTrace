@@ -217,6 +217,12 @@ export default function LessonRoom() {
   });
 
   const transcribingLive = transcription.active.length > 0;
+
+  /* The video tiles are labelled from this viewer's side, so the tutor sees
+     their own name on their own picture. */
+  const peerRole: Speaker = myRole === "tutor" ? "learner" : "tutor";
+  const selfName = myRole === "tutor" ? notebook.tutorName : notebook.learnerName;
+  const peerName = myRole === "tutor" ? notebook.learnerName : notebook.tutorName;
   /* A transcript that has quietly stopped is worse than one that says so. */
   const reconnecting = (["tutor", "learner"] as const).filter(
     (s) => transcription.status[s] === "reconnecting",
@@ -653,8 +659,9 @@ export default function LessonRoom() {
               cameraOn={cameraOn}
               micOn={micOn}
               layout="stage"
-              tutorName={notebook.tutorName}
-              learnerName={notebook.learnerName}
+              selfName={selfName}
+              peerName={peerName}
+              peerRole={peerRole}
               onStatus={setStatus}
               onReady={handleReady}
               onStreams={handleStreams}
@@ -740,8 +747,9 @@ export default function LessonRoom() {
                 token={session.token}
                 cameraOn={cameraOn}
                 micOn={micOn}
-                tutorName={notebook.tutorName}
-                learnerName={notebook.learnerName}
+                selfName={selfName}
+                peerName={peerName}
+                peerRole={peerRole}
                 onStatus={setStatus}
                 onReady={handleReady}
                 onStreams={handleStreams}

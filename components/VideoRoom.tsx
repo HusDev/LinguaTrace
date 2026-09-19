@@ -55,8 +55,16 @@ interface Props {
   cameraOn: boolean;
   /** False stops this device sending any audio into the room. */
   micOn: boolean;
-  tutorName: string;
-  learnerName: string;
+  /**
+   * Who each tile is, from this viewer's side.
+   *
+   * These used to be fixed as tutor and learner, which assumed the person
+   * looking was always the learner: signed in as the tutor, your own picture was
+   * labelled with the learner's name and the empty tile carried your own.
+   */
+  selfName: string;
+  peerName: string;
+  peerRole: "tutor" | "learner";
   /**
    * How the two people are shown.
    *
@@ -106,8 +114,9 @@ export function VideoRoom({
   token,
   cameraOn,
   micOn,
-  tutorName,
-  learnerName,
+  selfName,
+  peerName,
+  peerRole,
   layout = "tiles",
   onStatus,
   onReady,
@@ -298,8 +307,11 @@ export function VideoRoom({
     }
   }, [micOn]);
 
-  /* The placeholder name already says "tutor"; repeating it reads as a stutter. */
-  const tutorLabel = /tutor/i.test(tutorName) ? tutorName : `${tutorName} · tutor`;
+  /* A placeholder name can already say what it is - "Learner", "your tutor" -
+     and repeating the role reads as a stutter. */
+  const nameAndRole = (name: string, role: string) =>
+    name.toLowerCase().includes(role) ? name : `${name} · ${role}`;
+  const peerLabel = nameAndRole(peerName, peerRole);
   const badge =
     "absolute left-2 bottom-2 flex items-center gap-1.5 rounded-full bg-black/55 backdrop-blur px-2 py-0.5 text-[10px] text-white";
 
@@ -312,7 +324,7 @@ export function VideoRoom({
         {!peerPresent && (
           /* Kept clear of the corner, where your own picture sits. */
           <span className="absolute inset-x-4 top-1/2 -translate-y-1/2 pr-[36%] text-[13px] text-on-desk-soft text-center">
-            Waiting for {tutorName}
+            Waiting for {peerName}
           </span>
         )}
         <span className={badge}>
@@ -320,7 +332,7 @@ export function VideoRoom({
             aria-hidden
             className={`h-1.5 w-1.5 rounded-full ${peerPresent ? "bg-accent" : "bg-white/40"}`}
           />
-          {tutorLabel}
+          {peerLabel}
         </span>
 
         {/* You, tucked into the corner. */}
@@ -333,7 +345,7 @@ export function VideoRoom({
           )}
           <span className={badge}>
             <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent" />
-            {learnerName} · you
+            {selfName} · you
           </span>
         </div>
       </div>
@@ -342,15 +354,15 @@ export function VideoRoom({
 
   return (
     <div className="grid grid-cols-2 gap-2">
-      <Tile label={`${tutorName} · tutor`} online={peerPresent}>
+      <Tile label={peerLabel} online={peerPresent}>
         <div ref={peerRef} className="w-full h-full" />
         {!peerPresent && (
           <span className="absolute inset-0 grid place-items-center text-[11px] text-on-desk-soft px-2 text-center">
-            Waiting for {tutorName}
+            Waiting for {peerName}
           </span>
         )}
       </Tile>
-      <Tile label={`${learnerName} · you`} online>
+      <Tile label={`${selfName} · you`} online>
         <div ref={selfRef} className="w-full h-full" />
         {!cameraOn && (
           <span className="absolute inset-0 grid place-items-center text-[11px] text-on-desk-soft pointer-events-none">
