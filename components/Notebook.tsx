@@ -150,8 +150,11 @@ export function NotebookPage({
     notebook.vocabulary.length === 0 &&
     notebook.grammar.length === 0;
 
+  /* On a phone the page scrolls, so the paper grows with its content; on the
+     desk it is a fixed panel that scrolls inside itself. A scroll container
+     nested inside another leaves the notes stuck in a short box. */
   return (
-    <div className="paper rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.35)] h-full overflow-y-auto relative">
+    <div className="paper rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.35)] w-full min-h-full lg:h-full lg:overflow-y-auto relative">
       {/* Punch holes and the margin rule. */}
       <div aria-hidden className="absolute left-0 top-0 bottom-0 w-10 lg:w-[74px]">
         <span className="absolute left-3 lg:left-7 top-[76px] h-2.5 w-2.5 lg:h-3.5 lg:w-3.5 rounded-full bg-paper-hole/85" />

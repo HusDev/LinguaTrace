@@ -8,10 +8,12 @@ import { NotebookPage } from "@/components/Notebook";
 import { LessonPackView } from "@/components/LessonPackView";
 import { LiveRail } from "@/components/LiveRail";
 import { TutorView } from "@/components/TutorView";
+import { MobileLesson, type MobileTab } from "@/components/MobileLesson";
 import type { RoomApi, RoomStreams } from "@/components/VideoRoom";
 import type { WhiteboardApi } from "@/components/Whiteboard";
 import type { LessonPack } from "@/lib/lessonPack";
 import { useSpeech, useSpeechSupported } from "@/lib/useSpeech";
+import { useIsDesktop } from "@/lib/useIsDesktop";
 import { useLiveTranscription } from "@/lib/useLiveTranscription";
 import { emptyNotebook, type Notebook, type Speaker, type Turn } from "@/lib/types";
 
@@ -92,6 +94,9 @@ interface Capture {
 
 export default function LessonRoom() {
   const router = useRouter();
+  /* One layout at a time: both contain a video room, and mounting both would
+     open two calls. */
+  const isDesktop = useIsDesktop();
   const [phase, setPhase] = useState<Phase>("idle");
   const [lessonId, setLessonId] = useState<string | null>(null);
   const [live, setLive] = useState(false);
@@ -129,7 +134,7 @@ export default function LessonRoom() {
      panes. Stacked, the notebook - the thing the learner keeps - sat several
      screens below the video and the transcript. Above `lg` both are visible and
      this is ignored. */
-  const [mobilePane, setMobilePane] = useState<"call" | "notes">("call");
+  const [mobileTab, setMobileTab] = useState<MobileTab>("lesson");
   /* What the classifier decided about each turn. Without this the app is silent
      whenever it writes nothing, which is indistinguishable from being broken. */
   const [outcomes, setOutcomes] = useState<Record<string, string>>({});
@@ -361,8 +366,8 @@ export default function LessonRoom() {
    * showing, the camera otherwise. Two capture buttons would make the user work
    * out which one they wanted.
    */
-  async function capture() {
-    const onBoard = panel === "whiteboard";
+  async function capture(fromWhiteboard = panel === "whiteboard") {
+    const onBoard = fromWhiteboard;
     const dataUrl = onBoard
       ? await boardApi.current?.snapshot()
       : roomApi.current?.capture();
@@ -401,6 +406,26 @@ export default function LessonRoom() {
     );
   }
 
+  /** Prefer Gemini: it hears both sides and labels them. The browser recogniser
+      is only a fallback when there is no room to listen to. */
+  function toggleListening() {
+    if (session) {
+      setTranscribing((on) => !on);
+      return;
+    }
+    if (speech.listening) speech.stop();
+    else speech.start();
+  }
+
+  function copyInvite() {
+    if (!lessonId) return;
+    const url = `${window.location.origin}/?lesson=${lessonId}`;
+    void navigator.clipboard
+      ?.writeText(url)
+      .then(() => setStatus(`Invite link copied: ${url}`))
+      .catch(() => setStatus(`Invite link: ${url}`));
+  }
+
   function downloadPack() {
     if (!pack) return;
     const blob = new Blob([JSON.stringify(pack, null, 2)], {
@@ -416,6 +441,7 @@ export default function LessonRoom() {
 
   return (
     <main className="flex-1 flex flex-col gap-3 p-3 lg:h-screen lg:overflow-hidden">
+      {isDesktop && (
       <header className="flex flex-wrap items-center gap-2 lg:gap-3 px-1 shrink-0">
         <span
           aria-hidden
@@ -474,13 +500,7 @@ export default function LessonRoom() {
             )}
             {live && lessonId && (
               <button
-                onClick={() => {
-                  const url = `${window.location.origin}/?lesson=${lessonId}`;
-                  void navigator.clipboard
-                    ?.writeText(url)
-                    .then(() => setStatus(`Invite link copied: ${url}`))
-                    .catch(() => setStatus(`Invite link: ${url}`));
-                }}
+                onClick={copyInvite}
                 className="rounded-lg border border-panel-edge bg-panel px-3 lg:px-3.5 py-2 text-[12px] lg:text-[13px]"
               >
                 Copy invite
@@ -535,8 +555,9 @@ export default function LessonRoom() {
           </>
         )}
       </header>
+      )}
 
-      {(error || status) && (
+      {isDesktop && (error || status) && (
         <p
           className={`shrink-0 rounded-lg px-3 py-2 text-[12px] mx-1 ${
             error
@@ -548,28 +569,95 @@ export default function LessonRoom() {
         </p>
       )}
 
-      <div className="flex gap-1.5 shrink-0 lg:hidden px-1">
-        {(["call", "notes"] as const).map((pane) => (
-          <button
-            key={pane}
-            type="button"
-            onClick={() => setMobilePane(pane)}
-            aria-pressed={mobilePane === pane}
-            className={`flex-1 rounded-lg px-3 py-2 text-[13px] border capitalize ${
-              mobilePane === pane
-                ? "border-accent/50 bg-accent-bg/50 text-accent"
-                : "border-panel-edge bg-panel text-on-desk-soft"
-            }`}
-          >
-            {pane === "call" ? "Call" : myRole === "tutor" ? "Lesson" : "Notes"}
-          </button>
-        ))}
-      </div>
+      {!isDesktop && (
+      <MobileLesson
+        tab={mobileTab}
+        onTab={setMobileTab}
+        notebook={notebook}
+        outcomes={outcomes}
+        interim={interimText}
+        me={me}
+        phase={phase}
+        live={live}
+        listening={transcribing || speech.listening}
+        cameraOn={cameraOn}
+        reconnecting={reconnecting}
+        draft={draft}
+        canCapture={
+          phase !== "ended" &&
+          (mobileTab === "canvas" || (Boolean(session) && cameraOn))
+        }
+        onToggleListening={toggleListening}
+        onToggleCamera={() => setCameraOn((c) => !c)}
+        onCapture={() => void capture(mobileTab === "canvas")}
+        onDraft={setDraft}
+        onSend={() => {
+          submitTurn(draft, myRole);
+          setDraft("");
+        }}
+        onStart={() => void startLesson()}
+        onCopyInvite={copyInvite}
+        message={error ?? status}
+        messageIsError={Boolean(error)}
+        room={
+          session ? (
+            <VideoRoom
+              applicationId={session.applicationId}
+              sessionId={session.sessionId}
+              token={session.token}
+              cameraOn={cameraOn}
+              layout="stage"
+              tutorName={notebook.tutorName}
+              learnerName={notebook.learnerName}
+              onStatus={setStatus}
+              onReady={handleReady}
+              onStreams={handleStreams}
+            />
+          ) : (
+            <div className="w-full h-full rounded-2xl border border-panel-edge bg-panel-raised" />
+          )
+        }
+        notes={
+          myRole === "tutor" ? (
+            <TutorView notebook={notebook} learnerId={lessonLearnerId} />
+          ) : (
+            <NotebookPage
+              notebook={notebook}
+              previous={previous}
+              captures={captures}
+              date={lessonDate}
+            />
+          )
+        }
+        canvas={<Whiteboard onReady={handleBoardReady} />}
+        pack={
+          pack ? (
+            <div className="rounded-2xl bg-panel border border-panel-edge p-4">
+              <LessonPackView pack={pack} />
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-panel-edge bg-panel p-6 text-center">
+              <p className="text-[14px] mb-4">
+                {phase === "idle"
+                  ? "The pack is built when a lesson ends."
+                  : "End the lesson to build the Lesson Pack."}
+              </p>
+              <button
+                onClick={endLesson}
+                disabled={phase === "idle" || phase === "ended"}
+                className="rounded-xl bg-accent-bg text-accent border border-accent/40 px-5 py-2.5 text-[14px] font-medium disabled:opacity-40"
+              >
+                End lesson &amp; build pack
+              </button>
+            </div>
+          )
+        }
+      />
+      )}
 
+      {isDesktop && (
       <div className="grid gap-3 lg:grid-cols-[320px_minmax(0,1fr)] flex-1 min-h-0">
-        <div
-          className={`${mobilePane === "call" ? "flex" : "hidden"} lg:flex min-h-0 flex-col`}
-        >
+        <div className="hidden lg:flex min-h-0 flex-col">
         <LiveRail
           notebook={notebook}
           previous={previous}
@@ -589,16 +677,7 @@ export default function LessonRoom() {
             (panel === "whiteboard" || (Boolean(session) && cameraOn))
           }
           speechAvailable={speechAvailable || Boolean(session)}
-          onToggleListening={() => {
-            /* Prefer Gemini: it hears both sides and labels them. The browser
-               recogniser is only a fallback when there is no room to listen to. */
-            if (session) {
-              setTranscribing((on) => !on);
-              return;
-            }
-            if (speech.listening) speech.stop();
-            else speech.start();
-          }}
+          onToggleListening={toggleListening}
           onToggleCamera={() => setCameraOn((c) => !c)}
           onCapture={() => void capture()}
           captureSource={panel === "whiteboard" ? "whiteboard" : "camera"}
@@ -627,9 +706,7 @@ export default function LessonRoom() {
         />
         </div>
 
-        <div
-          className={`${mobilePane === "notes" ? "flex" : "hidden"} lg:flex min-h-0 flex-col gap-2`}
-        >
+        <div className="hidden lg:flex min-h-0 flex-col gap-2">
           {!pack && (
             <div className="flex gap-1.5 shrink-0">
               {(["notes", "whiteboard"] as const).map((tab) => (
@@ -691,6 +768,7 @@ export default function LessonRoom() {
           </div>
         </div>
       </div>
+      )}
     </main>
   );
 }

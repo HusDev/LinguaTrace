@@ -44,6 +44,14 @@ interface Props {
   cameraOn: boolean;
   tutorName: string;
   learnerName: string;
+  /**
+   * How the two people are shown.
+   *
+   * "tiles" puts them side by side, which suits a desktop rail. "stage" gives
+   * the other person the whole frame and tucks you into a corner - on a phone,
+   * two equal tiles make both faces too small to read.
+   */
+  layout?: "tiles" | "stage";
   onStatus: (status: string) => void;
   onReady: (api: RoomApi | null) => void;
   /**
@@ -86,6 +94,7 @@ export function VideoRoom({
   cameraOn,
   tutorName,
   learnerName,
+  layout = "tiles",
   onStatus,
   onReady,
   onStreams,
@@ -221,6 +230,45 @@ export function VideoRoom({
       // The publisher may not exist yet; the initial state already covers it.
     }
   }, [cameraOn]);
+
+  /* The placeholder name already says "tutor"; repeating it reads as a stutter. */
+  const tutorLabel = /tutor/i.test(tutorName) ? tutorName : `${tutorName} · tutor`;
+  const badge =
+    "absolute left-2 bottom-2 flex items-center gap-1.5 rounded-full bg-black/55 backdrop-blur px-2 py-0.5 text-[10px] text-white";
+
+  if (layout === "stage") {
+    return (
+      <div className="relative w-full h-full rounded-2xl overflow-hidden bg-panel-raised border border-panel-edge">
+        <div ref={peerRef} className="w-full h-full" />
+        {!peerPresent && (
+          <span className="absolute inset-0 grid place-items-center text-[13px] text-on-desk-soft px-4 text-center">
+            Waiting for {tutorName}
+          </span>
+        )}
+        <span className={badge}>
+          <span
+            aria-hidden
+            className={`h-1.5 w-1.5 rounded-full ${peerPresent ? "bg-accent" : "bg-white/40"}`}
+          />
+          {tutorLabel}
+        </span>
+
+        {/* You, tucked into the corner. */}
+        <div className="absolute right-2 bottom-2 w-[38%] max-w-[170px] aspect-[3/4] rounded-xl overflow-hidden border-2 border-accent/60 bg-desk">
+          <div ref={selfRef} className="w-full h-full" />
+          {!cameraOn && (
+            <span className="absolute inset-0 grid place-items-center text-[10px] text-on-desk-soft">
+              Camera off
+            </span>
+          )}
+          <span className={badge}>
+            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent" />
+            {learnerName} · you
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-2 gap-2">

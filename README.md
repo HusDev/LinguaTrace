@@ -217,16 +217,21 @@ them there.
 
 ## On a phone
 
-The two surfaces cannot share a phone screen, so below `lg` they become two
-panes - **Call** and **Notes** - with a switcher above them. Stacked, the
-notebook sat several screens below the video and the transcript, which puts the
-thing the learner keeps where nobody scrolls to.
+The phone layout is not the desk layout reflowed. It is four places you move
+between from a bottom bar - **Lesson**, **Canvas**, **Notes**, **Pack** - with
+the call on top: the other person takes the frame and you sit in the corner, the
+transcript runs underneath as bubbles, and the controls are a thumb's reach from
+the bottom. A turn the notebook took something from carries a sparkle, so the app
+is visibly working without leaving the call.
 
-The paper narrows with the screen rather than keeping its desktop margin: at
-390px the punch holes and margin rule were taking a quarter of the width.
+Two equal video tiles, which suit a desk rail, make both faces too small to read
+on a phone. Stacking the desk layout put the notebook - the thing the learner
+keeps - several screens below the fold.
 
-This matters for the demo as much as for real use. Two people testing a lesson
-usually means one of them is on a phone.
+The two layouts are a **real branch, not a CSS one**. Hiding a layout with a
+class still mounts it, and both contain a video room and a whiteboard: the page
+would have opened two Vonage publishers and two transcription sessions, doubled
+the cost, and judged every spoken turn twice.
 
 ## Why it looks like that
 
