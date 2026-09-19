@@ -73,7 +73,7 @@ export default async function LearnerHome({
           href="/"
           className="rounded-lg bg-accent-bg text-accent border border-accent/40 px-4 py-2 text-[13px] font-medium"
         >
-          Start a lesson
+          {me.role === "tutor" ? "Start a lesson" : "Go to the lesson"}
         </Link>
       </header>
 

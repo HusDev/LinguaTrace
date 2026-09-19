@@ -373,10 +373,16 @@ questions their turns are asked, and a tutor filed as a learner is never asked
 whether they just corrected something. Before accounts this was a control in the
 header that a misclick could get wrong.
 
-A tutor starts a lesson and sends the invite link. The first learner to follow it
-becomes that lesson's learner, and the lesson joins their history. A second
-learner following the same link is refused rather than quietly rewriting whose
-history it is.
+**Only a tutor starts a lesson.** A lesson is a tutor teaching a learner, so one
+opened by a learner alone has no teaching in it to write down - and it used to
+produce a lesson whose tutor was a placeholder, which then appeared on the
+learner's own screen as "your tutor". Learners arrive by invitation, and the
+refusal is on the server: the interface not offering a button is not the same as
+the app not allowing it.
+
+The tutor sends the invite link, and the first learner to follow it becomes that
+lesson's learner, so the lesson joins their history. A second learner following
+the same link is refused rather than quietly rewriting whose history it is.
 
 Passwords are hashed with scrypt from Node's own crypto; a session is a random
 token in the database behind an `HttpOnly`, `SameSite=lax` cookie, `Secure` in

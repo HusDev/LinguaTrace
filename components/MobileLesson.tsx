@@ -241,17 +241,29 @@ export function MobileLesson(props: MobileLessonProps) {
           <div className="flex flex-col gap-3 h-full">
             {!started ? (
               <div className="rounded-2xl border border-panel-edge bg-panel p-6 text-center">
-                <p className="text-[14px] mb-4">
-                  {me?.role === "tutor"
-                    ? "Start the lesson, then send the invite to your learner."
-                    : "Start a lesson, or open the link your tutor sent you."}
-                </p>
-                <button
-                  onClick={props.onStart}
-                  className="rounded-xl bg-accent-bg text-accent border border-accent/40 px-5 py-2.5 text-[14px] font-medium"
-                >
-                  Start lesson
-                </button>
+                {me?.role === "tutor" ? (
+                  <>
+                    <p className="text-[14px] mb-4">
+                      Start the lesson, then send the invite to your learner.
+                    </p>
+                    <button
+                      onClick={props.onStart}
+                      className="rounded-xl bg-accent-bg text-accent border border-accent/40 px-5 py-2.5 text-[14px] font-medium"
+                    >
+                      Start lesson
+                    </button>
+                  </>
+                ) : (
+                  /* A learner is not offered a button that would be refused. */
+                  <>
+                    <p className="text-[14px]">
+                      Your tutor starts the lesson.
+                    </p>
+                    <p className="text-[13px] text-on-desk-soft mt-2">
+                      Open the link they send you and you will join their room.
+                    </p>
+                  </>
+                )}
               </div>
             ) : (
               /* A fixed share of the screen: enough to read a face, not so much

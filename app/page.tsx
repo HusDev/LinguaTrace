@@ -489,14 +489,19 @@ export default function LessonRoom() {
         )}
         {!me && <span className="mr-auto" />}
 
-        {phase === "idle" && (
-          <button
-            onClick={() => void startLesson()}
-            className="rounded-lg bg-accent-bg text-accent border border-accent/40 px-3 lg:px-4 py-2 text-[12px] lg:text-[13px] font-medium"
-          >
-            Start lesson
-          </button>
-        )}
+        {phase === "idle" &&
+          (me?.role === "tutor" ? (
+            <button
+              onClick={() => void startLesson()}
+              className="rounded-lg bg-accent-bg text-accent border border-accent/40 px-3 lg:px-4 py-2 text-[12px] lg:text-[13px] font-medium"
+            >
+              Start lesson
+            </button>
+          ) : (
+            <p className="text-[12px] text-on-desk-soft">
+              Your tutor starts the lesson - open the link they send you.
+            </p>
+          ))}
         {(phase === "running" || phase === "paused") && (
           <>
             {!live && (
@@ -555,12 +560,14 @@ export default function LessonRoom() {
             >
               Download
             </button>
-            <button
-              onClick={() => void startLesson()}
-              className="rounded-lg bg-accent-bg text-accent border border-accent/40 px-3 lg:px-4 py-2 text-[12px] lg:text-[13px] font-medium"
-            >
-              New lesson
-            </button>
+            {me?.role === "tutor" && (
+              <button
+                onClick={() => void startLesson()}
+                className="rounded-lg bg-accent-bg text-accent border border-accent/40 px-3 lg:px-4 py-2 text-[12px] lg:text-[13px] font-medium"
+              >
+                New lesson
+              </button>
+            )}
           </>
         )}
       </header>

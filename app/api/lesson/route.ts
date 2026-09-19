@@ -116,29 +116,29 @@ export async function POST(request: Request) {
     });
   }
 
-  /* Starting a lesson. A learner starting alone is their own learner; a tutor
-     starting one holds the room until someone joins. */
+  /* Only a tutor opens a room. A lesson is a tutor teaching a learner, so one
+     started by a learner alone would have no teaching in it to write down - and
+     it produced a lesson whose tutor was a placeholder, which then showed up on
+     the learner's own screen as "your tutor". Learners arrive by invitation. */
+  if (me.role !== "tutor") {
+    return NextResponse.json(
+      { error: "Your tutor starts the lesson. Open the link they send you." },
+      { status: 403 },
+    );
+  }
+
   upsertLearnerFromAccount(me);
   const lessonId = `lesson-${Date.now().toString(36)}`;
-  const tutorName = me.role === "tutor" ? me.name : "your tutor";
-  /* A tutor holds the room before anyone joins, so the learner is a placeholder
-     rather than the tutor's own name - which is what used to appear on the
-     learner's video tile once they arrived. */
-  const learnerName = me.role === "learner" ? me.name : "Learner";
-  createLesson(
-    lessonId,
-    me.id,
-    tutorName,
-    me.role === "tutor" ? me.id : undefined,
-    learnerName,
-  );
+  /* The room is held before anyone joins, so the learner is a placeholder until
+     someone follows the invite. */
+  createLesson(lessonId, me.id, me.name, me.id, "Learner");
 
   const session = await createSession(lessonId);
   if (session.live) saveVideoSession(lessonId, session.sessionId);
 
   const notebook = getLesson(lessonId)!;
   return NextResponse.json({
-    ...shell(lessonId, notebook.learnerName, tutorName, me.id),
+    ...shell(lessonId, notebook.learnerName, me.name, me.id),
     joined: false,
     me,
     session,
