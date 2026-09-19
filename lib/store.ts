@@ -58,9 +58,10 @@ export function createLesson(
   learnerId: string,
   tutorName: string,
   tutorId?: string,
+  learnerName?: string,
 ): Notebook {
   const learner = getLearner(learnerId) ?? ensureLearner();
-  const notebook = emptyNotebook(lessonId, learner.name, tutorName);
+  const notebook = emptyNotebook(lessonId, learnerName ?? learner.name, tutorName);
   createLessonRow(lessonId, learner.id, tutorName, tutorId);
   live.set(lessonId, { notebook, learnerId: learner.id });
   return notebook;
@@ -87,6 +88,23 @@ function lessonLearnerId(lessonId: string): string | null {
 
 export function learnerIdFor(lessonId: string): string | null {
   return live.get(lessonId)?.learnerId ?? lessonLearnerId(lessonId);
+}
+
+/**
+ * Point the working copy at a different learner, and keep the name in step.
+ *
+ * A tutor's lesson is opened before anyone joins, so it starts with a
+ * placeholder learner. Updating only the stored row left the working copy
+ * holding the old name - and the working copy is what every response is built
+ * from, so a joining learner saw the tutor's name on their own video tile, on
+ * their own turns in the transcript, and at the top of the notebook.
+ */
+export function reassignLesson(lessonId: string, learnerId: string, name: string): void {
+  const held = live.get(lessonId);
+  if (!held) return;
+  held.learnerId = learnerId;
+  held.notebook.learnerName = name;
+  saveNotebook(held.notebook, learnerId);
 }
 
 /** Persist the lesson as it stands. Called after every judged turn. */

@@ -7,7 +7,12 @@ import {
   saveVideoSession,
   setLessonLearner,
 } from "@/lib/db";
-import { createLesson, getLesson, upsertLearnerFromAccount } from "@/lib/store";
+import {
+  createLesson,
+  getLesson,
+  reassignLesson,
+  upsertLearnerFromAccount,
+} from "@/lib/store";
 import { currentAccount } from "@/lib/auth";
 import { jevConfigured } from "@/lib/jev";
 import { mockLessonTurns } from "@/lib/mockLesson";
@@ -76,6 +81,9 @@ export async function POST(request: Request) {
       if (unclaimed || participants.learnerId === me.id) {
         upsertLearnerFromAccount(me);
         setLessonLearner(join, me.id);
+        // The working copy is what every response is built from, so it has to
+        // learn the new learner's name too, not just the stored row.
+        reassignLesson(join, me.id, me.name);
       } else if (participants.learnerId !== me.id) {
         return NextResponse.json(
           { error: "This lesson already belongs to another learner." },
@@ -113,7 +121,17 @@ export async function POST(request: Request) {
   upsertLearnerFromAccount(me);
   const lessonId = `lesson-${Date.now().toString(36)}`;
   const tutorName = me.role === "tutor" ? me.name : "your tutor";
-  createLesson(lessonId, me.id, tutorName, me.role === "tutor" ? me.id : undefined);
+  /* A tutor holds the room before anyone joins, so the learner is a placeholder
+     rather than the tutor's own name - which is what used to appear on the
+     learner's video tile once they arrived. */
+  const learnerName = me.role === "learner" ? me.name : "Learner";
+  createLesson(
+    lessonId,
+    me.id,
+    tutorName,
+    me.role === "tutor" ? me.id : undefined,
+    learnerName,
+  );
 
   const session = await createSession(lessonId);
   if (session.live) saveVideoSession(lessonId, session.sessionId);
