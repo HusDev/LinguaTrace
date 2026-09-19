@@ -347,6 +347,48 @@ Get a key at [typesafe.ai](https://typesafe.ai). Without one the lesson still
 replays and the transcript still fills, but the notebook stays empty and the page
 says why.
 
+## Two people in one lesson
+
+One person starts a lesson and presses **Copy invite**; the other opens the link
+and joins the same room. The joiner picks up the notebook as it already stands,
+and defaults to the tutor side since they are the second person in.
+
+Without this the app could only be used alone - both people pressing "Start
+lesson" opened two separate video rooms and waited for someone who was never
+coming, which is the one way this product does not work.
+
+**You cannot fully test this on one machine.** Two tabs cannot open the same
+webcam: the second gets `NotReadableError`, publishes nothing, and the first sees
+an empty tile. The join itself still works - the second tab sees the first - but
+judging the two-way call needs two devices.
+
+## Deploying
+
+The app keeps lessons in SQLite on disk, so it needs a host that keeps a
+filesystem between requests. Platforms whose functions start empty each time will
+lose every lesson unless the database moves to a hosted one first - that means
+rewriting `lib/db.ts`, and nothing above it.
+
+A `Dockerfile` and `fly.toml` are included:
+
+```bash
+fly launch --no-deploy          # rewrites app name and region for your account
+fly volumes create linguatrace_data --size 1
+fly secrets set \
+  TYPESAFE_API_KEY=...          \
+  GOOGLE_API_KEY=...            \
+  VONAGE_APPLICATION_ID=...     \
+  VONAGE_PRIVATE_KEY="$(cat vonage_private.key)"
+fly deploy
+```
+
+`VONAGE_PRIVATE_KEY` is the inline form of the key, used instead of
+`VONAGE_PRIVATE_KEY_PATH` because the container has no key file. It carries real
+newlines; keep the quotes.
+
+HTTPS is required - browsers refuse camera and microphone access on plain HTTP
+from anything but localhost - and the Fly config forces it.
+
 ## Evaluation
 
 The harness runs the real question set against labelled turns and reports recall

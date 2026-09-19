@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  /* A self-contained server bundle, so the container carries the app and its
+     runtime dependencies rather than the whole node_modules tree. */
+  output: "standalone",
 };
 
 export default nextConfig;

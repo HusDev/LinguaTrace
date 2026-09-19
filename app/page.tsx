@@ -240,7 +240,8 @@ export default function LessonRoom() {
     boardApi.current = api;
   }, []);
 
-  async function startLesson() {
+  const startLesson = useCallback(
+    async (join?: string) => {
     setError(null);
     setStatus(null);
     setPack(null);
@@ -249,8 +250,16 @@ export default function LessonRoom() {
     setTranscribing(false);
     setPrevious(notebook.turns.length > 0 ? notebook : previous);
 
-    const res = await fetch("/api/lesson", { method: "POST" });
+    const res = await fetch("/api/lesson", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(join ? { join } : {}),
+    });
     const data = await res.json();
+    if (!res.ok) {
+      setError(data.error ?? "Could not start the lesson.");
+      return;
+    }
     script.current = data.scriptedTurns;
     cursor.current = 0;
     setLessonId(data.lessonId);
@@ -266,14 +275,33 @@ export default function LessonRoom() {
           }
         : null,
     );
-    setNotebook(emptyNotebook(data.lessonId, data.learnerName, data.tutorName));
+    /* A joiner picks up the lesson as it already stands rather than a blank
+       page, so they see what has been written before they arrived. */
+    setNotebook(
+      data.notebook ??
+        emptyNotebook(data.lessonId, data.learnerName, data.tutorName),
+    );
+    // Whoever joins is the second person in the room, so they are the tutor
+    // unless they say otherwise.
+    if (data.joined) setMyRole("tutor");
     if (!data.jevConfigured) {
       setError(
         "TYPESAFE_API_KEY is not set, so nothing will be classified. Add it to .env.local and restart.",
       );
     }
     setPhase("running");
-  }
+    },
+    [notebook, previous],
+  );
+
+  /* Opening an invite link joins that lesson instead of starting a new one. */
+  const joinParam = useRef<string | null>(null);
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("lesson");
+    if (!id || joinParam.current) return;
+    joinParam.current = id;
+    void startLesson(id);
+  }, [startLesson]);
 
   async function endLesson() {
     if (!lessonId) return;
@@ -396,7 +424,7 @@ export default function LessonRoom() {
 
         {phase === "idle" && (
           <button
-            onClick={startLesson}
+            onClick={() => void startLesson()}
             className="rounded-lg bg-accent-bg text-accent border border-accent/40 px-4 py-2 text-[13px] font-medium"
           >
             Start lesson
@@ -410,6 +438,20 @@ export default function LessonRoom() {
                 className="rounded-lg border border-panel-edge bg-panel px-3.5 py-2 text-[13px]"
               >
                 {phase === "running" ? "Pause" : "Resume"}
+              </button>
+            )}
+            {live && lessonId && (
+              <button
+                onClick={() => {
+                  const url = `${window.location.origin}/?lesson=${lessonId}`;
+                  void navigator.clipboard
+                    ?.writeText(url)
+                    .then(() => setStatus(`Invite link copied: ${url}`))
+                    .catch(() => setStatus(`Invite link: ${url}`));
+                }}
+                className="rounded-lg border border-panel-edge bg-panel px-3.5 py-2 text-[13px]"
+              >
+                Copy invite
               </button>
             )}
             <button
@@ -453,7 +495,7 @@ export default function LessonRoom() {
               Download
             </button>
             <button
-              onClick={startLesson}
+              onClick={() => void startLesson()}
               className="rounded-lg bg-accent-bg text-accent border border-accent/40 px-4 py-2 text-[13px] font-medium"
             >
               New lesson

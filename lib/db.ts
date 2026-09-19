@@ -48,7 +48,10 @@ function db(): DatabaseSync {
       tutor_name  TEXT NOT NULL,
       started_at  INTEGER NOT NULL,
       ended_at    INTEGER,
-      whiteboard  TEXT
+      whiteboard  TEXT,
+      -- The Vonage session, so a second person can join the same room rather
+      -- than opening one of their own and waiting for nobody.
+      video_session TEXT
     );
 
     -- Turn and entry ids are unique within a lesson, not across the table: the
@@ -86,6 +89,16 @@ function db(): DatabaseSync {
     CREATE INDEX IF NOT EXISTS entry_by_lesson ON entry(lesson_id, seq);
     CREATE INDEX IF NOT EXISTS lesson_by_learner ON lesson(learner_id, started_at);
   `);
+  /* Existing databases predate some columns. Adding them is cheap and failing
+     is expected when they are already there. */
+  for (const column of ["video_session TEXT"]) {
+    try {
+      handle.exec(`ALTER TABLE lesson ADD COLUMN ${column}`);
+    } catch {
+      // Already present.
+    }
+  }
+
   database = handle;
   return handle;
 }
@@ -166,6 +179,20 @@ export function endLesson(lessonId: string): void {
   db()
     .prepare(`UPDATE lesson SET ended_at = ? WHERE id = ? AND ended_at IS NULL`)
     .run(Date.now(), lessonId);
+}
+
+/** Remember which video room a lesson is happening in, so others can join it. */
+export function saveVideoSession(lessonId: string, sessionId: string): void {
+  db()
+    .prepare(`UPDATE lesson SET video_session = ? WHERE id = ?`)
+    .run(sessionId, lessonId);
+}
+
+export function getVideoSession(lessonId: string): string | null {
+  const row = db()
+    .prepare(`SELECT video_session FROM lesson WHERE id = ?`)
+    .get(lessonId) as { video_session?: string } | undefined;
+  return row?.video_session ?? null;
 }
 
 export function saveWhiteboard(lessonId: string, document: string): void {

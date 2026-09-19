@@ -1,0 +1,23 @@
+# fly launch --no-deploy  will rewrite app/primary_region for your account.
+app = "linguatrace"
+primary_region = "lhr"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  LINGUATRACE_DB = "/data/linguatrace.db"
+
+# Lessons are stored on disk, so the machine keeps one between deploys.
+[[mounts]]
+  source = "linguatrace_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  # A lesson is a live WebSocket and a video call; stopping the machine
+  # mid-lesson would drop both.
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
