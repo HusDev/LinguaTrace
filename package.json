@@ -9,7 +9,7 @@
     "lint": "eslint",
     "eval": "tsx --env-file-if-exists=.env.local eval/run.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx eval/offline.test.ts"
+    "test": "tsx eval/offline.test.ts && tsx eval/storage.test.mts"
   },
   "dependencies": {
     "@google/genai": "^2.23.0",

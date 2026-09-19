@@ -9,6 +9,7 @@
 
 import {
   createLessonRow,
+  getLessonParticipants,
   endLesson as markLessonEnded,
   getLearner,
   listLessons,
@@ -79,11 +80,18 @@ export function getLesson(lessonId: string): Notebook | undefined {
   return stored;
 }
 
+/**
+ * Whose lesson this is, asked of the database rather than guessed.
+ *
+ * This used to scan only the demo learner's lessons, which was true before
+ * accounts and silently wrong after. The damage was invisible and total: on a
+ * restart, a real account's lesson resolved to nobody, so it was never taken
+ * back into the working set, and `persist` - which writes only what it holds -
+ * saved nothing. Turns were judged and thrown away, and the notebook simply
+ * stopped filling while the lesson carried on.
+ */
 function lessonLearnerId(lessonId: string): string | null {
-  for (const learner of [DEFAULT_LEARNER.id]) {
-    if (listLessons(learner).some((l) => l.id === lessonId)) return learner;
-  }
-  return null;
+  return getLessonParticipants(lessonId)?.learnerId ?? null;
 }
 
 export function learnerIdFor(lessonId: string): string | null {
