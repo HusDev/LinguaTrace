@@ -125,6 +125,11 @@ export default function LessonRoom() {
   const [streams, setStreams] = useState<RoomStreams>({ local: null, remote: null });
   const [transcribing, setTranscribing] = useState(false);
   const [panel, setPanel] = useState<"notes" | "whiteboard">("notes");
+  /* On a phone the call and the notes cannot share a screen, so they become two
+     panes. Stacked, the notebook - the thing the learner keeps - sat several
+     screens below the video and the transcript. Above `lg` both are visible and
+     this is ignored. */
+  const [mobilePane, setMobilePane] = useState<"call" | "notes">("call");
   /* What the classifier decided about each turn. Without this the app is silent
      whenever it writes nothing, which is indistinguishable from being broken. */
   const [outcomes, setOutcomes] = useState<Record<string, string>>({});
@@ -411,16 +416,18 @@ export default function LessonRoom() {
 
   return (
     <main className="flex-1 flex flex-col gap-3 p-3 lg:h-screen lg:overflow-hidden">
-      <header className="flex items-center gap-3 px-1 shrink-0">
+      <header className="flex flex-wrap items-center gap-2 lg:gap-3 px-1 shrink-0">
         <span
           aria-hidden
           className="grid place-items-center h-9 w-9 rounded-lg bg-panel-raised border border-panel-edge text-lg"
         >
           📓
         </span>
-        <div>
-          <h1 className="text-[17px] font-semibold leading-tight">LinguaTrace</h1>
-          <p className="text-[11px] text-on-desk-soft leading-tight">
+        <div className="mr-auto lg:mr-0">
+          <h1 className="text-[15px] lg:text-[17px] font-semibold leading-tight">
+            LinguaTrace
+          </h1>
+          <p className="text-[11px] text-on-desk-soft leading-tight hidden sm:block">
             Live lesson companion
           </p>
         </div>
@@ -440,7 +447,7 @@ export default function LessonRoom() {
               {me.name}
               <span className="text-on-desk-soft"> · {me.role}</span>
             </button>
-            <p className="text-[11px] text-on-desk-soft mr-auto ml-1 hidden sm:block">
+            <p className="text-[11px] text-on-desk-soft mr-auto ml-1 hidden xl:block">
               {myRole === "tutor" ? "seeing the tutor's view" : "seeing the notebook"}
             </p>
           </>
@@ -450,7 +457,7 @@ export default function LessonRoom() {
         {phase === "idle" && (
           <button
             onClick={() => void startLesson()}
-            className="rounded-lg bg-accent-bg text-accent border border-accent/40 px-4 py-2 text-[13px] font-medium"
+            className="rounded-lg bg-accent-bg text-accent border border-accent/40 px-3 lg:px-4 py-2 text-[12px] lg:text-[13px] font-medium"
           >
             Start lesson
           </button>
@@ -460,7 +467,7 @@ export default function LessonRoom() {
             {!live && (
               <button
                 onClick={() => setPhase(phase === "running" ? "paused" : "running")}
-                className="rounded-lg border border-panel-edge bg-panel px-3.5 py-2 text-[13px]"
+                className="rounded-lg border border-panel-edge bg-panel px-3 lg:px-3.5 py-2 text-[12px] lg:text-[13px]"
               >
                 {phase === "running" ? "Pause" : "Resume"}
               </button>
@@ -474,14 +481,14 @@ export default function LessonRoom() {
                     .then(() => setStatus(`Invite link copied: ${url}`))
                     .catch(() => setStatus(`Invite link: ${url}`));
                 }}
-                className="rounded-lg border border-panel-edge bg-panel px-3.5 py-2 text-[13px]"
+                className="rounded-lg border border-panel-edge bg-panel px-3 lg:px-3.5 py-2 text-[12px] lg:text-[13px]"
               >
                 Copy invite
               </button>
             )}
             <button
               onClick={endLesson}
-              className="rounded-lg bg-accent-bg text-accent border border-accent/40 px-4 py-2 text-[13px] font-medium"
+              className="rounded-lg bg-accent-bg text-accent border border-accent/40 px-3 lg:px-4 py-2 text-[12px] lg:text-[13px] font-medium"
             >
               Lesson pack
             </button>
@@ -492,7 +499,7 @@ export default function LessonRoom() {
             {me && (
               <Link
                 href={`/learner/${lessonLearnerId ?? me?.id}`}
-                className="rounded-lg border border-panel-edge bg-panel px-3.5 py-2 text-[13px]"
+                className="rounded-lg border border-panel-edge bg-panel px-3 lg:px-3.5 py-2 text-[12px] lg:text-[13px]"
               >
                 All lessons
               </Link>
@@ -500,7 +507,7 @@ export default function LessonRoom() {
             {lessonId && (
               <Link
                 href={`/lesson/${lessonId}`}
-                className="rounded-lg border border-panel-edge bg-panel px-3.5 py-2 text-[13px]"
+                className="rounded-lg border border-panel-edge bg-panel px-3 lg:px-3.5 py-2 text-[12px] lg:text-[13px]"
               >
                 Open this lesson
               </Link>
@@ -508,20 +515,20 @@ export default function LessonRoom() {
             <button
               onClick={() => setPack(null)}
               disabled={!pack}
-              className="rounded-lg border border-panel-edge bg-panel px-3.5 py-2 text-[13px] disabled:opacity-40"
+              className="rounded-lg border border-panel-edge bg-panel px-3 lg:px-3.5 py-2 text-[12px] lg:text-[13px] disabled:opacity-40"
             >
               Back to notes
             </button>
             <button
               onClick={downloadPack}
               disabled={!pack}
-              className="rounded-lg border border-panel-edge bg-panel px-3.5 py-2 text-[13px] disabled:opacity-40"
+              className="rounded-lg border border-panel-edge bg-panel px-3 lg:px-3.5 py-2 text-[12px] lg:text-[13px] disabled:opacity-40"
             >
               Download
             </button>
             <button
               onClick={() => void startLesson()}
-              className="rounded-lg bg-accent-bg text-accent border border-accent/40 px-4 py-2 text-[13px] font-medium"
+              className="rounded-lg bg-accent-bg text-accent border border-accent/40 px-3 lg:px-4 py-2 text-[12px] lg:text-[13px] font-medium"
             >
               New lesson
             </button>
@@ -541,7 +548,28 @@ export default function LessonRoom() {
         </p>
       )}
 
+      <div className="flex gap-1.5 shrink-0 lg:hidden px-1">
+        {(["call", "notes"] as const).map((pane) => (
+          <button
+            key={pane}
+            type="button"
+            onClick={() => setMobilePane(pane)}
+            aria-pressed={mobilePane === pane}
+            className={`flex-1 rounded-lg px-3 py-2 text-[13px] border capitalize ${
+              mobilePane === pane
+                ? "border-accent/50 bg-accent-bg/50 text-accent"
+                : "border-panel-edge bg-panel text-on-desk-soft"
+            }`}
+          >
+            {pane === "call" ? "Call" : myRole === "tutor" ? "Lesson" : "Notes"}
+          </button>
+        ))}
+      </div>
+
       <div className="grid gap-3 lg:grid-cols-[320px_minmax(0,1fr)] flex-1 min-h-0">
+        <div
+          className={`${mobilePane === "call" ? "flex" : "hidden"} lg:flex min-h-0 flex-col`}
+        >
         <LiveRail
           notebook={notebook}
           previous={previous}
@@ -597,8 +625,11 @@ export default function LessonRoom() {
             )
           }
         />
+        </div>
 
-        <div className="min-h-0 flex flex-col gap-2">
+        <div
+          className={`${mobilePane === "notes" ? "flex" : "hidden"} lg:flex min-h-0 flex-col gap-2`}
+        >
           {!pack && (
             <div className="flex gap-1.5 shrink-0">
               {(["notes", "whiteboard"] as const).map((tab) => (

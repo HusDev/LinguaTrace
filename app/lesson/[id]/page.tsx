@@ -48,12 +48,12 @@ export default async function LessonRecord({
     : "";
 
   return (
-    <main className="flex-1 flex flex-col p-4 gap-3 max-w-[1200px] w-full mx-auto lg:h-screen lg:overflow-hidden">
+    <main className="flex-1 flex flex-col p-3 sm:p-4 gap-3 max-w-[1200px] w-full mx-auto lg:h-screen lg:overflow-hidden">
       <header className="flex flex-wrap items-baseline gap-3 shrink-0 px-1">
-        <h1 className="font-hand text-3xl leading-none">
+        <h1 className="font-hand text-2xl sm:text-3xl leading-none">
           {notebook.learnerName} &amp; {notebook.tutorName}
         </h1>
-        <p className="text-[12px] text-on-desk-soft mr-auto">{date}</p>
+        <p className="text-[12px] text-on-desk-soft mr-auto shrink-0">{date}</p>
         {learner && (
           <Link
             href={`/learner/${learner.id}`}

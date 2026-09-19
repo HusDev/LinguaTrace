@@ -63,7 +63,7 @@ export default async function LearnerHome({
   );
 
   return (
-    <main className="flex-1 max-w-[1000px] w-full mx-auto p-6">
+    <main className="flex-1 max-w-[1000px] w-full mx-auto p-4 sm:p-6">
       <header className="flex flex-wrap items-baseline gap-3 mb-8">
         <h1 className="font-hand text-4xl leading-none">{learner.name}</h1>
         <p className="text-sm text-on-desk-soft mr-auto">
@@ -77,7 +77,7 @@ export default async function LearnerHome({
         </Link>
       </header>
 
-      <section className="grid gap-3 sm:grid-cols-4 mb-8">
+      <section className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3 mb-8">
         {[
           ["Lessons", finished.length],
           ["Corrections", totals.mistakes],
@@ -134,11 +134,11 @@ export default async function LearnerHome({
                   href={`/lesson/${lesson.id}`}
                   className="block rounded-xl border border-panel-edge bg-panel px-4 py-3 hover:border-accent/50 transition-colors"
                 >
-                  <div className="flex flex-wrap items-baseline gap-x-3">
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                     <span className="text-sm font-medium">
                       with {lesson.tutorName}
                     </span>
-                    <span className="text-[11px] text-on-desk-soft mr-auto">
+                    <span className="text-[11px] text-on-desk-soft sm:mr-auto">
                       {when(lesson.startedAt)}
                       {lesson.endedAt === null && " · in progress"}
                     </span>

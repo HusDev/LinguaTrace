@@ -113,12 +113,16 @@ export default function LoginPage() {
             </>
           )}
 
+          {/* Password managers add their own attributes to these fields before
+              React hydrates, which otherwise reports a mismatch on every visit
+              from anyone who uses one. */}
           <input
             name="email"
             type="email"
             autoComplete="email"
             placeholder="Email"
             required
+            suppressHydrationWarning
             className={field}
           />
           <input
@@ -127,6 +131,7 @@ export default function LoginPage() {
             autoComplete={mode === "login" ? "current-password" : "new-password"}
             placeholder={mode === "login" ? "Password" : "Password (8+ characters)"}
             required
+            suppressHydrationWarning
             className={field}
           />
 

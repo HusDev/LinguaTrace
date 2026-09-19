@@ -215,6 +215,19 @@ An uncorrected mistake is shown differently again: a dotted pencil note reading
 and offering nothing in its place tells the learner they are wrong and leaves
 them there.
 
+## On a phone
+
+The two surfaces cannot share a phone screen, so below `lg` they become two
+panes - **Call** and **Notes** - with a switcher above them. Stacked, the
+notebook sat several screens below the video and the transcript, which puts the
+thing the learner keeps where nobody scrolls to.
+
+The paper narrows with the screen rather than keeping its desktop margin: at
+390px the punch holes and margin rule were taking a quarter of the width.
+
+This matters for the demo as much as for real use. Two people testing a lesson
+usually means one of them is on a phone.
+
 ## Why it looks like that
 
 Two surfaces that deliberately look nothing alike. The left is software: a dark

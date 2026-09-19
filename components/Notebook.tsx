@@ -92,7 +92,7 @@ function Correction({
   const resolved = Boolean(corrected);
 
   return (
-    <div className={`written font-hand text-[1.35rem] leading-9 ${unsure ? "tentative" : ""}`}>
+    <div className={`written font-hand text-[1.15rem] lg:text-[1.35rem] leading-8 lg:leading-9 ${unsure ? "tentative" : ""}`}>
       {/* Inline rather than flex: in a narrow taped card, a flex row leaves the
           mark stranded on a line of its own while the sentence wraps below. */}
       <p className={resolved ? "text-ink-red" : "text-ink-soft"}>
@@ -153,16 +153,16 @@ export function NotebookPage({
   return (
     <div className="paper rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.35)] h-full overflow-y-auto relative">
       {/* Punch holes and the margin rule. */}
-      <div aria-hidden className="absolute left-0 top-0 bottom-0 w-[74px]">
-        <span className="absolute left-7 top-[76px] h-3.5 w-3.5 rounded-full bg-paper-hole/85" />
-        <span className="absolute left-7 top-[480px] h-3.5 w-3.5 rounded-full bg-paper-hole/85" />
+      <div aria-hidden className="absolute left-0 top-0 bottom-0 w-10 lg:w-[74px]">
+        <span className="absolute left-3 lg:left-7 top-[76px] h-2.5 w-2.5 lg:h-3.5 lg:w-3.5 rounded-full bg-paper-hole/85" />
+        <span className="absolute left-3 lg:left-7 top-[480px] h-2.5 w-2.5 lg:h-3.5 lg:w-3.5 rounded-full bg-paper-hole/85" />
       </div>
       <div
         aria-hidden
-        className="absolute left-[74px] top-0 bottom-0 w-px bg-paper-margin"
+        className="absolute left-10 lg:left-[74px] top-0 bottom-0 w-px bg-paper-margin"
       />
 
-      <div className="pl-[98px] pr-10 py-7 text-ink min-h-full">
+      <div className="pl-[52px] pr-4 lg:pl-[98px] lg:pr-10 py-5 lg:py-7 text-ink min-h-full">
         <header className="flex items-baseline justify-between font-sans text-[11px] text-ink-soft mb-5">
           <span>
             {notebook.learnerName === "Learner"
@@ -173,8 +173,8 @@ export function NotebookPage({
           <span>AI field notes</span>
         </header>
 
-        <div className="flex items-start justify-between gap-8">
-          <div className="font-hand text-[1.9rem] leading-[2.6rem] min-w-0">
+        <div className="flex flex-col lg:flex-row items-start lg:justify-between gap-3 lg:gap-8">
+          <div className="font-hand text-[1.5rem] leading-[2.1rem] lg:text-[1.9rem] lg:leading-[2.6rem] min-w-0">
             {focus && (
               <p>
                 <span className="text-ink-red">Focus:</span> {focus}
@@ -189,7 +189,7 @@ export function NotebookPage({
           </div>
 
           {focus && (
-            <div className="shrink-0 text-right">
+            <div className="shrink-0 lg:text-right">
               <span className="inline-flex items-center gap-2 rounded-full bg-mark-green px-3.5 py-1.5 font-hand text-lg text-ink">
                 <span aria-hidden>▊▌▎</span>
                 {focus} · {notebook.mistakes.length}{" "}
@@ -212,14 +212,14 @@ export function NotebookPage({
 
         {notebook.vocabulary.length > 0 && (
           <section className="mt-7">
-            <h3 className="font-hand text-[1.6rem] mb-2">
+            <h3 className="font-hand text-[1.35rem] lg:text-[1.6rem] mb-2">
               <Mark tone="green">New vocabulary:</Mark>
             </h3>
-            <ul className="font-hand text-[1.35rem] leading-9 pl-6">
+            <ul className="font-hand text-[1.15rem] lg:text-[1.35rem] leading-8 lg:leading-9 pl-2 lg:pl-6">
               {notebook.vocabulary.map((v) => (
                 <li
                   key={v.id}
-                  className={`written flex items-baseline gap-3 ${v.provenance.certainty === "tentative" ? "tentative" : ""}`}
+                  className={`written flex flex-wrap lg:flex-nowrap items-baseline gap-x-3 ${v.provenance.certainty === "tentative" ? "tentative" : ""}`}
                 >
                   <span aria-hidden className="text-ink-soft shrink-0">
                     •
@@ -243,7 +243,7 @@ export function NotebookPage({
                   {/* A tutor can explain a word for three sentences. The line
                       stays one line; the Lesson Pack keeps the full text. */}
                   <span
-                    className="text-ink-soft min-w-0 truncate"
+                    className="text-ink-soft min-w-0 basis-full lg:basis-auto lg:truncate"
                     title={v.context}
                   >
                     {v.context}
@@ -256,7 +256,7 @@ export function NotebookPage({
 
         {notebook.mistakes.length > 0 && (
           <section className="mt-7">
-            <h3 className="font-hand text-[1.6rem] mb-2">
+            <h3 className="font-hand text-[1.35rem] lg:text-[1.6rem] mb-2">
               <Mark tone="pink">Corrections:</Mark>
             </h3>
             <div className="space-y-3 pl-2">
@@ -279,11 +279,11 @@ export function NotebookPage({
 
         {explanation && (
           <section className="mt-7">
-            <h3 className="font-hand text-[1.6rem] mb-2">
+            <h3 className="font-hand text-[1.35rem] lg:text-[1.6rem] mb-2">
               <Mark tone="green">Tutor explanation:</Mark>
             </h3>
             <p
-              className={`written font-hand text-[1.35rem] leading-9 pl-6 hand-underline inline-block ${
+              className={`written font-hand text-[1.15rem] lg:text-[1.35rem] leading-8 lg:leading-9 pl-2 lg:pl-6 hand-underline inline-block ${
                 explanation.provenance.certainty === "tentative" ? "tentative" : ""
               }`}
             >
