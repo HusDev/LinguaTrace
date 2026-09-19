@@ -1,0 +1,322 @@
+{
+  "description": "Labelled turns for testing the LinguaTrace note-taker. Each case states what a competent tutor would expect the notebook to record. Negative cases matter as much as positive ones: a note-taker that fires on every line is noise.",
+  "cases": [
+    {
+      "id": "tense-error",
+      "context": [
+        {
+          "speaker": "tutor",
+          "text": "How was your week?"
+        }
+      ],
+      "turn": {
+        "speaker": "learner",
+        "text": "Yesterday I go to the office."
+      },
+      "expect": {
+        "contains_error": true
+      }
+    },
+    {
+      "id": "tense-correction",
+      "context": [
+        {
+          "speaker": "learner",
+          "text": "Yesterday I go to the office."
+        }
+      ],
+      "turn": {
+        "speaker": "tutor",
+        "text": "Yesterday I went to the office. With 'yesterday' the verb moves to the past."
+      },
+      "expect": {
+        "is_correction": true,
+        "is_grammar_explanation": true
+      }
+    },
+    {
+      "id": "clean-learner-turn",
+      "context": [
+        {
+          "speaker": "tutor",
+          "text": "Tell me about the meeting."
+        }
+      ],
+      "turn": {
+        "speaker": "learner",
+        "text": "My manager asked me to present the numbers to the team."
+      },
+      "expect": {
+        "contains_error": false
+      }
+    },
+    {
+      "id": "greeting-is-not-a-lesson",
+      "context": [],
+      "turn": {
+        "speaker": "tutor",
+        "text": "Hi Ana, good to see you again."
+      },
+      "expect": {
+        "is_correction": false,
+        "introduces_vocabulary": false,
+        "is_grammar_explanation": false,
+        "flags_practice_need": false,
+        "states_goal": false
+      }
+    },
+    {
+      "id": "vocabulary-taught",
+      "context": [
+        {
+          "speaker": "learner",
+          "text": "Sometimes I cannot find the word and I stop."
+        }
+      ],
+      "turn": {
+        "speaker": "tutor",
+        "text": "There is a useful expression for that: 'to draw a blank'. It means your mind goes empty."
+      },
+      "expect": {
+        "introduces_vocabulary": true,
+        "vocabulary_term": "draw a blank"
+      }
+    },
+    {
+      "id": "ordinary-words-are-not-vocabulary",
+      "context": [],
+      "turn": {
+        "speaker": "tutor",
+        "text": "That sounds like a difficult week. What happened on Tuesday?"
+      },
+      "expect": {
+        "introduces_vocabulary": false
+      }
+    },
+    {
+      "id": "goal-stated",
+      "context": [],
+      "turn": {
+        "speaker": "learner",
+        "text": "I want to speak confidently in meetings before my review in June."
+      },
+      "expect": {
+        "states_goal": true
+      }
+    },
+    {
+      "id": "practice-flagged",
+      "context": [],
+      "turn": {
+        "speaker": "tutor",
+        "text": "We should keep working on past tenses before the next lesson."
+      },
+      "expect": {
+        "flags_practice_need": true
+      }
+    },
+    {
+      "id": "praise-is-not-correction",
+      "context": [
+        {
+          "speaker": "learner",
+          "text": "I had three presentations last month."
+        }
+      ],
+      "turn": {
+        "speaker": "tutor",
+        "text": "Perfect, that is exactly right. Well done."
+      },
+      "expect": {
+        "is_correction": false
+      }
+    },
+    {
+      "id": "agreement-error",
+      "context": [],
+      "turn": {
+        "speaker": "learner",
+        "text": "He go to work every day by train."
+      },
+      "expect": {
+        "contains_error": true
+      }
+    },
+    {
+      "id": "agreement-correction",
+      "context": [
+        {
+          "speaker": "learner",
+          "text": "He go to work every day by train."
+        }
+      ],
+      "turn": {
+        "speaker": "tutor",
+        "text": "He goes to work every day by train."
+      },
+      "expect": {
+        "is_correction": true,
+        "error_type": "agreement"
+      },
+      "note": "A single error type, so the label is unambiguous."
+    },
+    {
+      "id": "question-is-not-explanation",
+      "context": [],
+      "turn": {
+        "speaker": "tutor",
+        "text": "And what did you say to your manager?"
+      },
+      "expect": {
+        "is_grammar_explanation": false,
+        "is_correction": false
+      }
+    },
+    {
+      "id": "mixed-error-correction",
+      "note": "Two error types in one sentence. Either label is defensible, so this case checks only that a correction is detected at all.",
+      "context": [
+        {
+          "speaker": "learner",
+          "text": "Last month I has three presentations and all of them was stressful."
+        }
+      ],
+      "turn": {
+        "speaker": "tutor",
+        "text": "Last month I had three presentations and all of them were stressful."
+      },
+      "expect": {
+        "is_correction": true
+      }
+    },
+    {
+      "id": "meta-commentary-is-not-lesson-speech",
+      "note": "Observed on a live call: the learner talking about the app was written up as a language mistake.",
+      "context": [],
+      "turn": {
+        "speaker": "learner",
+        "text": "so there's this is I don't know why it says that it's wrong"
+      },
+      "expect": {
+        "is_lesson_speech": false
+      }
+    },
+    {
+      "id": "microphone-test-is-not-lesson-speech",
+      "context": [],
+      "turn": {
+        "speaker": "learner",
+        "text": "testing, testing, can you hear me now?"
+      },
+      "expect": {
+        "is_lesson_speech": false
+      }
+    },
+    {
+      "id": "ordinary-practice-is-lesson-speech",
+      "context": [
+        {
+          "speaker": "tutor",
+          "text": "Tell me what you did at the weekend."
+        }
+      ],
+      "turn": {
+        "speaker": "learner",
+        "text": "On Saturday I visited my sister and we cooked together."
+      },
+      "expect": {
+        "is_lesson_speech": true,
+        "contains_error": false
+      }
+    },
+    {
+      "id": "learner-question-is-lesson-speech",
+      "context": [],
+      "turn": {
+        "speaker": "learner",
+        "text": "What is the difference between 'since' and 'for'?"
+      },
+      "expect": {
+        "is_lesson_speech": true
+      }
+    },
+    {
+      "id": "work-talk-alone-is-lesson-speech",
+      "note": "Observed: with no preceding turn this scored 0.36 and the learner's practice was discarded.",
+      "context": [],
+      "turn": {
+        "speaker": "learner",
+        "text": "I am asking about the tracking status and sending it to the client."
+      },
+      "expect": {
+        "is_lesson_speech": true
+      }
+    },
+    {
+      "id": "long-work-answer-is-lesson-speech",
+      "context": [],
+      "turn": {
+        "speaker": "learner",
+        "text": "What you also see here is that um use cases I would categorize them in tiers. I would have use cases that can be fully automated, for example like the tracking status"
+      },
+      "expect": {
+        "is_lesson_speech": true
+      }
+    },
+    {
+      "id": "work-story-with-an-error",
+      "context": [],
+      "turn": {
+        "speaker": "learner",
+        "text": "Last week I have send three reports to the client."
+      },
+      "expect": {
+        "is_lesson_speech": true,
+        "contains_error": true
+      }
+    },
+    {
+      "id": "grammar-example-is-not-vocabulary",
+      "note": "Observed end to end: 'go becomes went' became a flashcard glossed as 'se convierte en'.",
+      "context": [
+        {
+          "speaker": "learner",
+          "text": "Yesterday I go to the office."
+        }
+      ],
+      "turn": {
+        "speaker": "tutor",
+        "text": "Yesterday I went to the office. When you use yesterday, the verb moves into the past, so go becomes went."
+      },
+      "expect": {
+        "is_correction": true,
+        "is_grammar_explanation": true,
+        "introduces_vocabulary": false
+      }
+    },
+    {
+      "id": "contrast-explanation-is-not-vocabulary",
+      "context": [],
+      "turn": {
+        "speaker": "tutor",
+        "text": "It went well. We use well for how something happened, and good for describing a thing."
+      },
+      "expect": {
+        "is_grammar_explanation": true,
+        "introduces_vocabulary": false
+      }
+    },
+    {
+      "id": "encouragement-is-not-a-practice-task",
+      "note": "Observed end to end: 'it will come with practice' was logged as something to practise.",
+      "context": [],
+      "turn": {
+        "speaker": "tutor",
+        "text": "It is the most common thing learners slip on, and it will come with practice."
+      },
+      "expect": {
+        "flags_practice_need": false
+      }
+    }
+  ]
+}

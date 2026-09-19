@@ -1,26 +1,35 @@
 {
-  "name": "linguatrace-scaffold",
+  "name": "linguatrace",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "eval": "tsx --env-file-if-exists=.env.local eval/run.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx eval/offline.test.ts"
   },
   "dependencies": {
+    "@google/genai": "^2.23.0",
+    "@typesafe-ai/sdk": "^0.6.0",
+    "@vonage/client-sdk-video": "^2.35.2",
     "next": "16.3.5",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "tldraw": "^5.4.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^26.6.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^18.0.1",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "tailwindcss": "^4",
+    "tsx": "^4.23.13",
     "typescript": "^5"
   }
 }

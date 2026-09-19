@@ -1,26 +1,141 @@
 @import "tailwindcss";
 
+/*
+ * Two surfaces, deliberately unalike: a dark desk that holds the live call, and
+ * a sheet of cream paper that holds the lesson. The contrast is the point - the
+ * call is software, the notebook is the thing you keep - so this design is fixed
+ * rather than following the system light/dark preference.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  /* Desk */
+  --desk: #241b16;
+  --panel: #2f251e;
+  --panel-raised: #3a2e25;
+  --panel-edge: #4a3a2e;
+  --on-desk: #f2ebe3;
+  --on-desk-soft: #a99a8d;
+  --accent: #8fd9ac;
+  --accent-bg: #2c5741;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* Paper */
+  --paper: #fbf7ec;
+  --paper-rule: #e2ddcb;
+  --paper-margin: #d98a8a;
+  --paper-hole: #241b16;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Ink */
+  --ink: #2f2a25;
+  --ink-soft: #7d7264;
+  --ink-red: #c0392b;
+  --ink-green: #2e7d4f;
+  --pen-blue: #2f5d9e;
+
+  /* Marker highlights */
+  --mark-green: #cde8d4;
+  --mark-pink: #f7d9d7;
+  --mark-blue: #d8e5f6;
+
+  --tape: #e7d7a4;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--desk);
+  color: var(--on-desk);
+}
+
+@theme inline {
+  --color-desk: var(--desk);
+  --color-panel: var(--panel);
+  --color-panel-raised: var(--panel-raised);
+  --color-panel-edge: var(--panel-edge);
+  --color-on-desk: var(--on-desk);
+  --color-on-desk-soft: var(--on-desk-soft);
+  --color-accent: var(--accent);
+  --color-accent-bg: var(--accent-bg);
+  --color-paper: var(--paper);
+  --color-paper-rule: var(--paper-rule);
+  --color-paper-margin: var(--paper-margin);
+  --color-paper-hole: var(--paper-hole);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-red: var(--ink-red);
+  --color-ink-green: var(--ink-green);
+  --color-pen-blue: var(--pen-blue);
+  --color-mark-green: var(--mark-green);
+  --color-mark-pink: var(--mark-pink);
+  --color-mark-blue: var(--mark-blue);
+  --color-tape: var(--tape);
+  --font-sans: var(--font-inter);
+  --font-hand: var(--font-caveat);
+}
+
+/* Ruled paper, with a margin rule the writing starts after. */
+.paper {
+  background-color: var(--paper);
+  /* The rule pitch matches the writing's 36px line height, so lines and words
+     stay in step down the page instead of drifting apart. */
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 35px,
+    var(--paper-rule) 35px,
+    var(--paper-rule) 36px
+  );
+}
+
+/*
+ * A marker highlight. The uneven radius and slight rotation keep it from
+ * reading as a rectangle drawn by software, which is the whole illusion.
+ */
+.mark {
+  padding: 0.05em 0.45em 0.1em;
+  border-radius: 0.6em 0.3em 0.55em 0.25em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* A hand-drawn underline: thicker in the middle, tapering at the ends. */
+.hand-underline {
+  background-image: linear-gradient(
+    to right,
+    transparent,
+    currentColor 8%,
+    currentColor 92%,
+    transparent
+  );
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 100% 1.5px;
+  padding-bottom: 2px;
+}
+
+/* Ink landing on paper. */
+@keyframes write-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px) rotate(-0.3deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.written {
+  animation: write-in 340ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .written {
+    animation: none;
+  }
+}
+
+/* Entries the model was unsure about: visibly provisional, never asserted. */
+.tentative {
+  opacity: 0.66;
+}
+
+.paper ::selection {
+  background: var(--mark-green);
 }

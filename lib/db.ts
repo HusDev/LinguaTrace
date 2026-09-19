@@ -1,0 +1,419 @@
+/**
+ * Where a lesson lives once it is over.
+ *
+ * Revision happens between lessons, repeatedly, so a lesson has to be something
+ * you can open again - a page, not a download. That means storage, and storage
+ * changes what the app can honestly claim: "verb tense, four lessons running" is
+ * a statement no in-memory app could make.
+ *
+ * SQLite, through Node's built-in driver, so the app needs no service to run.
+ * Every query lives in this file and returns plain objects, so moving to
+ * Postgres later means rewriting this one module and nothing above it.
+ *
+ * What is deliberately NOT stored: camera frames. A whiteboard snapshot is a
+ * drawing, but a video still is a person's face, and keeping those indefinitely
+ * is a different promise than keeping their notes. Captures live in the page for
+ * the length of the lesson and are gone on refresh. The whiteboard persists as
+ * its tldraw document - vector, small, and reopenable - with images derived from
+ * it on demand rather than stored.
+ */
+
+import { DatabaseSync } from "node:sqlite";
+import { mkdirSync } from "node:fs";
+import { dirname, join } from "node:path";
+import type { Certainty, ErrorType, Notebook, Speaker, Turn } from "./types";
+
+const DB_PATH = process.env.LINGUATRACE_DB ?? join(process.cwd(), "data", "linguatrace.db");
+
+let database: DatabaseSync | null = null;
+
+function db(): DatabaseSync {
+  if (database) return database;
+  mkdirSync(dirname(DB_PATH), { recursive: true });
+  const handle = new DatabaseSync(DB_PATH);
+  handle.exec(`
+    PRAGMA journal_mode = WAL;
+
+    CREATE TABLE IF NOT EXISTS learner (
+      id               TEXT PRIMARY KEY,
+      name             TEXT NOT NULL,
+      native_language  TEXT NOT NULL DEFAULT 'Spanish',
+      target_language  TEXT NOT NULL DEFAULT 'English',
+      created_at       INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS lesson (
+      id          TEXT PRIMARY KEY,
+      learner_id  TEXT NOT NULL REFERENCES learner(id),
+      tutor_name  TEXT NOT NULL,
+      started_at  INTEGER NOT NULL,
+      ended_at    INTEGER,
+      whiteboard  TEXT
+    );
+
+    -- Turn and entry ids are unique within a lesson, not across the table: the
+    -- scripted lesson numbers its turns t0..t23 every time it runs, so a global
+    -- primary key makes the second lesson collide with the first.
+    CREATE TABLE IF NOT EXISTS turn (
+      id         TEXT NOT NULL,
+      lesson_id  TEXT NOT NULL REFERENCES lesson(id),
+      speaker    TEXT NOT NULL,
+      text       TEXT NOT NULL,
+      at         INTEGER NOT NULL,
+      seq        INTEGER NOT NULL,
+      PRIMARY KEY (lesson_id, id)
+    );
+
+    CREATE TABLE IF NOT EXISTS entry (
+      id           TEXT NOT NULL,
+      lesson_id    TEXT NOT NULL REFERENCES lesson(id),
+      kind         TEXT NOT NULL,
+      said         TEXT,
+      corrected    TEXT,
+      term         TEXT,
+      gloss        TEXT,
+      translation  TEXT,
+      text         TEXT,
+      error_type   TEXT,
+      severity     REAL,
+      score        REAL NOT NULL,
+      certainty    TEXT NOT NULL,
+      seq          INTEGER NOT NULL,
+      PRIMARY KEY (lesson_id, id)
+    );
+
+    CREATE INDEX IF NOT EXISTS turn_by_lesson  ON turn(lesson_id, seq);
+    CREATE INDEX IF NOT EXISTS entry_by_lesson ON entry(lesson_id, seq);
+    CREATE INDEX IF NOT EXISTS lesson_by_learner ON lesson(learner_id, started_at);
+  `);
+  database = handle;
+  return handle;
+}
+
+/* ------------------------------------------------------------------ *
+ * Learners
+ * ------------------------------------------------------------------ */
+
+export interface LearnerRecord {
+  id: string;
+  name: string;
+  nativeLanguage: string;
+  targetLanguage: string;
+}
+
+export function upsertLearner(learner: LearnerRecord): void {
+  db()
+    .prepare(
+      `INSERT INTO learner (id, name, native_language, target_language, created_at)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         name = excluded.name,
+         native_language = excluded.native_language,
+         target_language = excluded.target_language`,
+    )
+    .run(
+      learner.id,
+      learner.name,
+      learner.nativeLanguage,
+      learner.targetLanguage,
+      Date.now(),
+    );
+}
+
+export function getLearner(id: string): LearnerRecord | null {
+  const row = db()
+    .prepare(`SELECT * FROM learner WHERE id = ?`)
+    .get(id) as Record<string, string> | undefined;
+  if (!row) return null;
+  return {
+    id: row.id,
+    name: row.name,
+    nativeLanguage: row.native_language,
+    targetLanguage: row.target_language,
+  };
+}
+
+export function listLearners(): LearnerRecord[] {
+  const rows = db()
+    .prepare(`SELECT * FROM learner ORDER BY created_at DESC`)
+    .all() as Array<Record<string, string>>;
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    nativeLanguage: r.native_language,
+    targetLanguage: r.target_language,
+  }));
+}
+
+/* ------------------------------------------------------------------ *
+ * Lessons
+ * ------------------------------------------------------------------ */
+
+export function createLessonRow(
+  lessonId: string,
+  learnerId: string,
+  tutorName: string,
+): void {
+  db()
+    .prepare(
+      `INSERT OR IGNORE INTO lesson (id, learner_id, tutor_name, started_at)
+       VALUES (?, ?, ?, ?)`,
+    )
+    .run(lessonId, learnerId, tutorName, Date.now());
+}
+
+export function endLesson(lessonId: string): void {
+  db()
+    .prepare(`UPDATE lesson SET ended_at = ? WHERE id = ? AND ended_at IS NULL`)
+    .run(Date.now(), lessonId);
+}
+
+export function saveWhiteboard(lessonId: string, document: string): void {
+  db().prepare(`UPDATE lesson SET whiteboard = ? WHERE id = ?`).run(document, lessonId);
+}
+
+export function getWhiteboard(lessonId: string): string | null {
+  const row = db()
+    .prepare(`SELECT whiteboard FROM lesson WHERE id = ?`)
+    .get(lessonId) as { whiteboard?: string } | undefined;
+  return row?.whiteboard ?? null;
+}
+
+/**
+ * Write the lesson's current state.
+ *
+ * Replaces rather than diffs: a lesson is small, and a full rewrite means a
+ * dropped request can never leave half a notebook on disk. Called after each
+ * turn, so a refresh mid-lesson resumes instead of starting over.
+ */
+export function saveNotebook(notebook: Notebook, learnerId: string): void {
+  const handle = db();
+  createLessonRow(notebook.lessonId, learnerId, notebook.tutorName);
+
+  handle.exec("BEGIN");
+  try {
+    handle.prepare(`DELETE FROM turn WHERE lesson_id = ?`).run(notebook.lessonId);
+    handle.prepare(`DELETE FROM entry WHERE lesson_id = ?`).run(notebook.lessonId);
+
+    const turnStmt = handle.prepare(
+      `INSERT INTO turn (id, lesson_id, speaker, text, at, seq) VALUES (?, ?, ?, ?, ?, ?)`,
+    );
+    notebook.turns.forEach((turn, i) => {
+      turnStmt.run(turn.id, notebook.lessonId, turn.speaker, turn.text, turn.at, i);
+    });
+
+    const entryStmt = handle.prepare(
+      `INSERT INTO entry
+        (id, lesson_id, kind, said, corrected, term, gloss, translation, text,
+         error_type, severity, score, certainty, seq)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    );
+
+    let seq = 0;
+    for (const m of notebook.mistakes) {
+      entryStmt.run(
+        m.id, notebook.lessonId, "mistake", m.said, m.corrected ?? null,
+        null, null, null, null, m.errorType, m.severity,
+        m.provenance.score, m.provenance.certainty, seq++,
+      );
+    }
+    for (const v of notebook.vocabulary) {
+      entryStmt.run(
+        v.id, notebook.lessonId, "vocabulary", null, null, v.term, v.context,
+        v.translation ?? null, null, null, null,
+        v.provenance.score, v.provenance.certainty, seq++,
+      );
+    }
+    for (const [kind, items] of [
+      ["grammar", notebook.grammar],
+      ["goal", notebook.goals],
+      ["practice", notebook.practiceTopics],
+    ] as const) {
+      for (const item of items) {
+        entryStmt.run(
+          item.id, notebook.lessonId, kind, null, null, null, null, null,
+          item.text, null, null, item.provenance.score, item.provenance.certainty, seq++,
+        );
+      }
+    }
+    handle.exec("COMMIT");
+  } catch (error) {
+    handle.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+interface EntryRow {
+  id: string;
+  kind: string;
+  said: string | null;
+  corrected: string | null;
+  term: string | null;
+  gloss: string | null;
+  translation: string | null;
+  text: string | null;
+  error_type: string | null;
+  severity: number | null;
+  score: number;
+  certainty: string;
+}
+
+/** Rebuild a stored lesson into the same shape the live app uses. */
+export function loadNotebook(lessonId: string): Notebook | null {
+  const handle = db();
+  const lesson = handle
+    .prepare(
+      `SELECT l.*, le.name AS learner_name FROM lesson l
+       JOIN learner le ON le.id = l.learner_id WHERE l.id = ?`,
+    )
+    .get(lessonId) as Record<string, string> | undefined;
+  if (!lesson) return null;
+
+  const turns = (
+    handle
+      .prepare(`SELECT * FROM turn WHERE lesson_id = ? ORDER BY seq`)
+      .all(lessonId) as Array<Record<string, string | number>>
+  ).map<Turn>((r) => ({
+    id: String(r.id),
+    speaker: String(r.speaker) as Speaker,
+    text: String(r.text),
+    at: Number(r.at),
+  }));
+
+  const rows = handle
+    .prepare(`SELECT * FROM entry WHERE lesson_id = ? ORDER BY seq`)
+    .all(lessonId) as unknown as EntryRow[];
+
+  const notebook: Notebook = {
+    lessonId,
+    learnerName: String(lesson.learner_name),
+    tutorName: String(lesson.tutor_name),
+    turns,
+    mistakes: [],
+    vocabulary: [],
+    grammar: [],
+    goals: [],
+    practiceTopics: [],
+    processedTurnIds: turns.map((t) => t.id),
+  };
+
+  for (const row of rows) {
+    const provenance = {
+      turnIds: [],
+      score: row.score,
+      certainty: row.certainty as Certainty,
+    };
+    if (row.kind === "mistake") {
+      notebook.mistakes.push({
+        id: row.id,
+        said: row.said ?? "",
+        corrected: row.corrected ?? undefined,
+        errorType: (row.error_type ?? "other") as ErrorType,
+        severity: row.severity ?? 1,
+        provenance,
+      });
+    } else if (row.kind === "vocabulary") {
+      notebook.vocabulary.push({
+        id: row.id,
+        term: row.term ?? "",
+        context: row.gloss ?? "",
+        translation: row.translation ?? undefined,
+        provenance,
+      });
+    } else {
+      const item = { id: row.id, text: row.text ?? "", provenance };
+      if (row.kind === "grammar") notebook.grammar.push(item);
+      if (row.kind === "goal") notebook.goals.push(item);
+      if (row.kind === "practice") notebook.practiceTopics.push(item);
+    }
+  }
+
+  return notebook;
+}
+
+/* ------------------------------------------------------------------ *
+ * History - what the learner's home page is made of
+ * ------------------------------------------------------------------ */
+
+export interface LessonSummary {
+  id: string;
+  tutorName: string;
+  startedAt: number;
+  endedAt: number | null;
+  turns: number;
+  mistakes: number;
+  corrected: number;
+  vocabulary: number;
+}
+
+export function listLessons(learnerId: string): LessonSummary[] {
+  const rows = db()
+    .prepare(
+      `SELECT l.id, l.tutor_name, l.started_at, l.ended_at,
+              (SELECT COUNT(*) FROM turn  t WHERE t.lesson_id = l.id) AS turns,
+              (SELECT COUNT(*) FROM entry e WHERE e.lesson_id = l.id AND e.kind = 'mistake') AS mistakes,
+              (SELECT COUNT(*) FROM entry e WHERE e.lesson_id = l.id AND e.kind = 'mistake' AND e.corrected IS NOT NULL) AS corrected,
+              (SELECT COUNT(*) FROM entry e WHERE e.lesson_id = l.id AND e.kind = 'vocabulary') AS vocabulary
+       FROM lesson l
+       WHERE l.learner_id = ?
+       ORDER BY l.started_at DESC`,
+    )
+    .all(learnerId) as Array<Record<string, number | string | null>>;
+
+  return rows.map((r) => ({
+    id: String(r.id),
+    tutorName: String(r.tutor_name),
+    startedAt: Number(r.started_at),
+    endedAt: r.ended_at === null ? null : Number(r.ended_at),
+    turns: Number(r.turns),
+    mistakes: Number(r.mistakes),
+    corrected: Number(r.corrected),
+    vocabulary: Number(r.vocabulary),
+  }));
+}
+
+export interface WeaknessRow {
+  errorType: ErrorType;
+  total: number;
+  lessons: number;
+  /** Lessons since it last appeared; 0 means it came up in the newest lesson. */
+  lessonsSinceSeen: number;
+}
+
+/**
+ * The weakness profile across a learner's history.
+ *
+ * This is the claim the app could not make before it stored anything: not
+ * "two fewer than last time" but "verb tense, four lessons running".
+ */
+export function weaknessProfile(learnerId: string): WeaknessRow[] {
+  const order = listLessons(learnerId).map((l) => l.id);
+  if (order.length === 0) return [];
+
+  const rows = db()
+    .prepare(
+      `SELECT e.error_type AS error_type, e.lesson_id AS lesson_id, COUNT(*) AS n
+       FROM entry e JOIN lesson l ON l.id = e.lesson_id
+       WHERE l.learner_id = ? AND e.kind = 'mistake' AND e.error_type IS NOT NULL
+       GROUP BY e.error_type, e.lesson_id`,
+    )
+    .all(learnerId) as Array<Record<string, string | number>>;
+
+  const byType = new Map<string, { total: number; lessons: Set<string> }>();
+  for (const row of rows) {
+    const key = String(row.error_type);
+    const bucket = byType.get(key) ?? { total: 0, lessons: new Set<string>() };
+    bucket.total += Number(row.n);
+    bucket.lessons.add(String(row.lesson_id));
+    byType.set(key, bucket);
+  }
+
+  return [...byType.entries()]
+    .map(([errorType, bucket]) => ({
+      errorType: errorType as ErrorType,
+      total: bucket.total,
+      lessons: bucket.lessons.size,
+      lessonsSinceSeen: order.findIndex((id) => bucket.lessons.has(id)),
+    }))
+    .sort((a, b) => b.lessons - a.lessons || b.total - a.total);
+}
