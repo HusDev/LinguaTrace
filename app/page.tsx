@@ -312,6 +312,15 @@ export default function LessonRoom() {
     [notebook, previous],
   );
 
+  /* A status line reports something that just happened, so it goes away by
+     itself rather than taking a row of a phone screen for the whole lesson.
+     Errors stay: those are not news, they are a condition. */
+  useEffect(() => {
+    if (!status) return;
+    const timer = setTimeout(() => setStatus(null), 6000);
+    return () => clearTimeout(timer);
+  }, [status]);
+
   /* Who is signed in. The app is unusable without it, so a missing account
      sends you to sign in rather than showing a page that cannot work. */
   useEffect(() => {

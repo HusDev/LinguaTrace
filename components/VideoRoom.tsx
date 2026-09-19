@@ -238,10 +238,13 @@ export function VideoRoom({
 
   if (layout === "stage") {
     return (
-      <div className="relative w-full h-full rounded-2xl overflow-hidden bg-panel-raised border border-panel-edge">
+      /* The SDK sizes its own video element; cover makes it fill the frame
+         instead of leaving bars down the sides of a portrait phone. */
+      <div className="relative w-full h-full rounded-2xl overflow-hidden bg-black border border-panel-edge [&_video]:h-full [&_video]:w-full [&_video]:object-cover">
         <div ref={peerRef} className="w-full h-full" />
         {!peerPresent && (
-          <span className="absolute inset-0 grid place-items-center text-[13px] text-on-desk-soft px-4 text-center">
+          /* Kept clear of the corner, where your own picture sits. */
+          <span className="absolute inset-x-4 top-1/2 -translate-y-1/2 pr-[36%] text-[13px] text-on-desk-soft text-center">
             Waiting for {tutorName}
           </span>
         )}
@@ -254,7 +257,7 @@ export function VideoRoom({
         </span>
 
         {/* You, tucked into the corner. */}
-        <div className="absolute right-2 bottom-2 w-[38%] max-w-[170px] aspect-[3/4] rounded-xl overflow-hidden border-2 border-accent/60 bg-desk">
+        <div className="absolute right-2 bottom-2 w-[32%] max-w-[130px] aspect-[3/4] rounded-xl overflow-hidden border-2 border-accent/60 bg-desk">
           <div ref={selfRef} className="w-full h-full" />
           {!cameraOn && (
             <span className="absolute inset-0 grid place-items-center text-[10px] text-on-desk-soft">
