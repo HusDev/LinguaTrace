@@ -34,6 +34,28 @@ function db(): DatabaseSync {
   handle.exec(`
     PRAGMA journal_mode = WAL;
 
+    -- People who can sign in. Role is set at sign-up and decides what the app
+    -- shows and, during a lesson, which side of the conversation someone is on.
+    CREATE TABLE IF NOT EXISTS account (
+      id               TEXT PRIMARY KEY,
+      email            TEXT NOT NULL UNIQUE,
+      password_hash    TEXT NOT NULL,
+      name             TEXT NOT NULL,
+      role             TEXT NOT NULL CHECK (role IN ('tutor', 'learner')),
+      native_language  TEXT NOT NULL DEFAULT 'Spanish',
+      target_language  TEXT NOT NULL DEFAULT 'English',
+      created_at       INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS auth_session (
+      token       TEXT PRIMARY KEY,
+      account_id  TEXT NOT NULL REFERENCES account(id),
+      created_at  INTEGER NOT NULL,
+      expires_at  INTEGER NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS session_by_account ON auth_session(account_id);
+
     CREATE TABLE IF NOT EXISTS learner (
       id               TEXT PRIMARY KEY,
       name             TEXT NOT NULL,
@@ -91,7 +113,7 @@ function db(): DatabaseSync {
   `);
   /* Existing databases predate some columns. Adding them is cheap and failing
      is expected when they are already there. */
-  for (const column of ["video_session TEXT"]) {
+  for (const column of ["video_session TEXT", "tutor_id TEXT"]) {
     try {
       handle.exec(`ALTER TABLE lesson ADD COLUMN ${column}`);
     } catch {
@@ -101,6 +123,95 @@ function db(): DatabaseSync {
 
   database = handle;
   return handle;
+}
+
+/* ------------------------------------------------------------------ *
+ * Accounts and sessions
+ * ------------------------------------------------------------------ */
+
+export interface AccountRecord {
+  id: string;
+  email: string;
+  name: string;
+  role: "tutor" | "learner";
+  nativeLanguage: string;
+  targetLanguage: string;
+}
+
+function toAccount(row: Record<string, string>): AccountRecord {
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    role: row.role as "tutor" | "learner",
+    nativeLanguage: row.native_language,
+    targetLanguage: row.target_language,
+  };
+}
+
+export function createAccount(account: AccountRecord, passwordHash: string): void {
+  db()
+    .prepare(
+      `INSERT INTO account
+         (id, email, password_hash, name, role, native_language, target_language, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      account.id,
+      account.email,
+      passwordHash,
+      account.name,
+      account.role,
+      account.nativeLanguage,
+      account.targetLanguage,
+      Date.now(),
+    );
+}
+
+export function findAccountByEmail(
+  email: string,
+): { account: AccountRecord; passwordHash: string } | null {
+  const row = db()
+    .prepare(`SELECT * FROM account WHERE email = ?`)
+    .get(email) as Record<string, string> | undefined;
+  if (!row) return null;
+  return { account: toAccount(row), passwordHash: row.password_hash };
+}
+
+export function getAccount(id: string): AccountRecord | null {
+  const row = db()
+    .prepare(`SELECT * FROM account WHERE id = ?`)
+    .get(id) as Record<string, string> | undefined;
+  return row ? toAccount(row) : null;
+}
+
+export function createAuthSession(
+  token: string,
+  accountId: string,
+  expiresAt: number,
+): void {
+  db()
+    .prepare(
+      `INSERT INTO auth_session (token, account_id, created_at, expires_at)
+       VALUES (?, ?, ?, ?)`,
+    )
+    .run(token, accountId, Date.now(), expiresAt);
+}
+
+export function deleteAuthSession(token: string): void {
+  db().prepare(`DELETE FROM auth_session WHERE token = ?`).run(token);
+}
+
+/** The account behind a session token, if the session has not expired. */
+export function findAccountBySession(token: string, now: number): AccountRecord | null {
+  const row = db()
+    .prepare(
+      `SELECT a.* FROM auth_session s
+       JOIN account a ON a.id = s.account_id
+       WHERE s.token = ? AND s.expires_at > ?`,
+    )
+    .get(token, now) as Record<string, string> | undefined;
+  return row ? toAccount(row) : null;
 }
 
 /* ------------------------------------------------------------------ *
@@ -166,13 +277,44 @@ export function createLessonRow(
   lessonId: string,
   learnerId: string,
   tutorName: string,
+  tutorId?: string,
 ): void {
   db()
     .prepare(
-      `INSERT OR IGNORE INTO lesson (id, learner_id, tutor_name, started_at)
-       VALUES (?, ?, ?, ?)`,
+      `INSERT OR IGNORE INTO lesson (id, learner_id, tutor_name, started_at, tutor_id)
+       VALUES (?, ?, ?, ?, ?)`,
     )
-    .run(lessonId, learnerId, tutorName, Date.now());
+    .run(lessonId, learnerId, tutorName, Date.now(), tutorId ?? null);
+}
+
+/**
+ * Attach a learner to a lesson the tutor opened.
+ *
+ * A tutor can start a lesson before anyone joins, so the learner is only known
+ * once they follow the invite.
+ */
+export function setLessonLearner(lessonId: string, learnerId: string): void {
+  db().prepare(`UPDATE lesson SET learner_id = ? WHERE id = ?`).run(learnerId, lessonId);
+}
+
+export function getLessonParticipants(
+  lessonId: string,
+): { learnerId: string; tutorId: string | null } | null {
+  const row = db()
+    .prepare(`SELECT learner_id, tutor_id FROM lesson WHERE id = ?`)
+    .get(lessonId) as { learner_id?: string; tutor_id?: string } | undefined;
+  if (!row?.learner_id) return null;
+  return { learnerId: row.learner_id, tutorId: row.tutor_id ?? null };
+}
+
+/** Lessons a tutor has taught, newest first. */
+export function listLessonsForTutor(tutorId: string): LessonSummary[] {
+  const ids = db()
+    .prepare(`SELECT DISTINCT learner_id FROM lesson WHERE tutor_id = ?`)
+    .all(tutorId) as Array<{ learner_id: string }>;
+  return ids
+    .flatMap((r) => listLessons(r.learner_id))
+    .sort((a, b) => b.startedAt - a.startedAt);
 }
 
 export function endLesson(lessonId: string): void {

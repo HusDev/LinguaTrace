@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { getLearner, listLessons, weaknessProfile } from "@/lib/db";
+import { currentAccount } from "@/lib/auth";
 import { ERROR_TYPE_LABELS } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +39,13 @@ export default async function LearnerHome({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+
+  /* A learner's history is theirs and their tutor's. Anyone else - including
+     another learner who guessed the link - gets nothing. */
+  const me = await currentAccount();
+  if (!me) redirect(`/login?next=${encodeURIComponent(`/learner/${id}`)}`);
+  if (me.role === "learner" && me.id !== id) notFound();
+
   const learner = getLearner(id);
   if (!learner) notFound();
 

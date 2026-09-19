@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NotebookPage } from "@/components/Notebook";
@@ -90,6 +91,7 @@ interface Capture {
 }
 
 export default function LessonRoom() {
+  const router = useRouter();
   const [phase, setPhase] = useState<Phase>("idle");
   const [lessonId, setLessonId] = useState<string | null>(null);
   const [live, setLive] = useState(false);
@@ -109,7 +111,16 @@ export default function LessonRoom() {
   const [cameraOn, setCameraOn] = useState(true);
   /* Speech recognition hears this microphone only, so the person at this desk
      says which side of the lesson they are. */
-  const [myRole, setMyRole] = useState<Speaker>("learner");
+  /* The lesson's learner, which is not the signed-in account when a tutor is
+     the one looking. */
+  const [lessonLearnerId, setLessonLearnerId] = useState<string | null>(null);
+  const [me, setMe] = useState<{
+    id: string;
+    name: string;
+    role: Speaker;
+  } | null>(null);
+  /* Who you are decides your side of the lesson. It is not a control. */
+  const myRole: Speaker = me?.role ?? "learner";
   const [draft, setDraft] = useState("");
   const [streams, setStreams] = useState<RoomStreams>({ local: null, remote: null });
   const [transcribing, setTranscribing] = useState(false);
@@ -117,7 +128,6 @@ export default function LessonRoom() {
   /* What the classifier decided about each turn. Without this the app is silent
      whenever it writes nothing, which is indistinguishable from being broken. */
   const [outcomes, setOutcomes] = useState<Record<string, string>>({});
-  const [learnerId, setLearnerId] = useState<string | null>(null);
 
   const script = useRef<Turn[]>([]);
   const cursor = useRef(0);
@@ -264,7 +274,8 @@ export default function LessonRoom() {
     cursor.current = 0;
     setLessonId(data.lessonId);
     setLessonDate(data.date);
-    setLearnerId(data.learnerId ?? null);
+    if (data.me) setMe(data.me);
+    setLessonLearnerId(data.learnerId ?? null);
     setLive(data.session.live);
     setSession(
       data.session.live
@@ -281,9 +292,6 @@ export default function LessonRoom() {
       data.notebook ??
         emptyNotebook(data.lessonId, data.learnerName, data.tutorName),
     );
-    // Whoever joins is the second person in the room, so they are the tutor
-    // unless they say otherwise.
-    if (data.joined) setMyRole("tutor");
     if (!data.jevConfigured) {
       setError(
         "TYPESAFE_API_KEY is not set, so nothing will be classified. Add it to .env.local and restart.",
@@ -293,6 +301,29 @@ export default function LessonRoom() {
     },
     [notebook, previous],
   );
+
+  /* Who is signed in. The app is unusable without it, so a missing account
+     sends you to sign in rather than showing a page that cannot work. */
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => {
+        if (cancelled) return;
+        if (d.account) {
+          setMe(d.account);
+          return;
+        }
+        const next = encodeURIComponent(
+          window.location.pathname + window.location.search,
+        );
+        router.replace(`/login?next=${next}`);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
   /* Opening an invite link joins that lesson instead of starting a new one. */
   const joinParam = useRef<string | null>(null);
@@ -394,33 +425,27 @@ export default function LessonRoom() {
           </p>
         </div>
 
-        {/* One switch, because being the tutor and seeing the tutor's view are
-            the same thing from the person's point of view. It sets who this
-            device's audio and typed turns belong to, and what the panel shows. */}
-        <div
-          role="group"
-          aria-label="I am the"
-          className="ml-2 flex rounded-lg border border-panel-edge bg-panel p-0.5"
-        >
-          {(["learner", "tutor"] as const).map((role) => (
+        {me && (
+          <>
             <button
-              key={role}
               type="button"
-              onClick={() => setMyRole(role)}
-              aria-pressed={myRole === role}
-              className={`rounded-md px-3 py-1.5 text-[12px] capitalize transition-colors ${
-                myRole === role
-                  ? "bg-accent-bg text-accent"
-                  : "text-on-desk-soft hover:text-on-desk"
-              }`}
+              onClick={async () => {
+                await fetch("/api/auth/logout", { method: "POST" });
+                router.replace("/login");
+                router.refresh();
+              }}
+              title="Sign out"
+              className="ml-2 rounded-lg border border-panel-edge bg-panel px-3 py-1.5 text-[12px] hover:border-on-desk-soft/50"
             >
-              {role}
+              {me.name}
+              <span className="text-on-desk-soft"> · {me.role}</span>
             </button>
-          ))}
-        </div>
-        <p className="text-[11px] text-on-desk-soft mr-auto ml-1 hidden sm:block">
-          {myRole === "tutor" ? "seeing the tutor's view" : "seeing the notebook"}
-        </p>
+            <p className="text-[11px] text-on-desk-soft mr-auto ml-1 hidden sm:block">
+              {myRole === "tutor" ? "seeing the tutor's view" : "seeing the notebook"}
+            </p>
+          </>
+        )}
+        {!me && <span className="mr-auto" />}
 
         {phase === "idle" && (
           <button
@@ -464,9 +489,9 @@ export default function LessonRoom() {
         )}
         {phase === "ended" && (
           <>
-            {learnerId && (
+            {me && (
               <Link
-                href={`/learner/${learnerId}`}
+                href={`/learner/${lessonLearnerId ?? me?.id}`}
                 className="rounded-lg border border-panel-edge bg-panel px-3.5 py-2 text-[13px]"
               >
                 All lessons
@@ -536,7 +561,6 @@ export default function LessonRoom() {
             (panel === "whiteboard" || (Boolean(session) && cameraOn))
           }
           speechAvailable={speechAvailable || Boolean(session)}
-          onRole={setMyRole}
           onToggleListening={() => {
             /* Prefer Gemini: it hears both sides and labels them. The browser
                recogniser is only a fallback when there is no room to listen to. */
@@ -621,7 +645,7 @@ export default function LessonRoom() {
                   }`}
                 >
                   {myRole === "tutor" ? (
-                    <TutorView notebook={notebook} learnerId={learnerId} />
+                    <TutorView notebook={notebook} learnerId={lessonLearnerId} />
                   ) : (
                     <NotebookPage
                       notebook={notebook}

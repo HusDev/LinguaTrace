@@ -110,7 +110,6 @@ export interface RailProps {
   myRole: Speaker;
   draft: string;
   room: ReactNode;
-  onRole: (role: Speaker) => void;
   onToggleListening: () => void;
   onToggleCamera: () => void;
   onCapture: () => void;

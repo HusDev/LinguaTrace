@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { listLessons, weaknessProfile } from "@/lib/db";
+import { currentAccount } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -11,9 +12,17 @@ export const runtime = "nodejs";
  * has stopped.
  */
 export async function GET(request: Request) {
+  const me = await currentAccount();
+  if (!me) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+
   const learnerId = new URL(request.url).searchParams.get("learnerId");
   if (!learnerId) {
     return NextResponse.json({ error: "learnerId is required" }, { status: 400 });
+  }
+
+  // A learner sees only their own profile; a tutor sees the learners they teach.
+  if (me.role === "learner" && me.id !== learnerId) {
+    return NextResponse.json({ error: "Not yours." }, { status: 403 });
   }
 
   const lessons = listLessons(learnerId);

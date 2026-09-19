@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { buildLessonPack } from "@/lib/lessonPack";
 import { finishLesson, getLesson, learnerIdFor, previousLesson } from "@/lib/store";
+import { currentAccount } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
 /** Build the Lesson Pack and close the lesson. */
 export async function POST(request: Request) {
+  if (!(await currentAccount())) {
+    return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  }
+
   let body: { lessonId?: string };
   try {
     body = await request.json();

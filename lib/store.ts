@@ -18,6 +18,7 @@ import {
   type LearnerRecord,
 } from "./db";
 import { emptyNotebook, type Notebook } from "./types";
+import type { AccountRecord } from "./db";
 
 const live = new Map<string, { notebook: Notebook; learnerId: string }>();
 
@@ -36,14 +37,31 @@ export function ensureLearner(learner: LearnerRecord = DEFAULT_LEARNER): Learner
   return learner;
 }
 
+/**
+ * Mirror an account into the learner table.
+ *
+ * Lessons and their entries key off a learner id, and that stays true for
+ * accounts: an account simply becomes the learner it refers to. Keeping the two
+ * tables in step here means nothing downstream had to learn about accounts.
+ */
+export function upsertLearnerFromAccount(account: AccountRecord): void {
+  upsertLearner({
+    id: account.id,
+    name: account.name,
+    nativeLanguage: account.nativeLanguage,
+    targetLanguage: account.targetLanguage,
+  });
+}
+
 export function createLesson(
   lessonId: string,
   learnerId: string,
   tutorName: string,
+  tutorId?: string,
 ): Notebook {
   const learner = getLearner(learnerId) ?? ensureLearner();
   const notebook = emptyNotebook(lessonId, learner.name, tutorName);
-  createLessonRow(lessonId, learner.id, tutorName);
+  createLessonRow(lessonId, learner.id, tutorName, tutorId);
   live.set(lessonId, { notebook, learnerId: learner.id });
   return notebook;
 }

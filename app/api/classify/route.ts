@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { processTurn } from "@/lib/notebook";
 import { getLearner } from "@/lib/db";
+import { currentAccount } from "@/lib/auth";
 import { getLesson, learnerIdFor, persist } from "@/lib/store";
 import { jevConfigured } from "@/lib/jev";
 import type { Turn } from "@/lib/types";
@@ -15,6 +16,10 @@ export const runtime = "nodejs";
  * a dropped response cannot leave the page showing a half-applied lesson.
  */
 export async function POST(request: Request) {
+  if (!(await currentAccount())) {
+    return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  }
+
   if (!jevConfigured()) {
     return NextResponse.json(
       { error: "TYPESAFE_API_KEY is not set. Add it to .env.local and restart." },

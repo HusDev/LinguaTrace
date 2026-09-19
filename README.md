@@ -347,11 +347,33 @@ Get a key at [typesafe.ai](https://typesafe.ai). Without one the lesson still
 replays and the transcript still fills, but the notebook stays empty and the page
 says why.
 
+## Accounts
+
+Sign up as a **tutor** or a **learner**. Role is chosen once and never again,
+because it is not a preference: which side of a lesson someone is on decides what
+questions their turns are asked, and a tutor filed as a learner is never asked
+whether they just corrected something. Before accounts this was a control in the
+header that a misclick could get wrong.
+
+A tutor starts a lesson and sends the invite link. The first learner to follow it
+becomes that lesson's learner, and the lesson joins their history. A second
+learner following the same link is refused rather than quietly rewriting whose
+history it is.
+
+Passwords are hashed with scrypt from Node's own crypto; a session is a random
+token in the database behind an `HttpOnly`, `SameSite=lax` cookie, `Secure` in
+production. There is no third-party identity service, because what this app needs
+from identity is narrow.
+
+A learner's history is theirs and their tutor's. Every route checks: another
+learner who guesses the link gets a 404, not a redirect that confirms the page
+exists.
+
 ## Two people in one lesson
 
-One person starts a lesson and presses **Copy invite**; the other opens the link
-and joins the same room. The joiner picks up the notebook as it already stands,
-and defaults to the tutor side since they are the second person in.
+The tutor starts a lesson and presses **Copy invite**; the learner opens the link
+while signed in and joins the same room. The joiner picks up the notebook as it
+already stands.
 
 Without this the app could only be used alone - both people pressing "Start
 lesson" opened two separate video rooms and waited for someone who was never
@@ -369,9 +391,7 @@ filesystem between requests. Platforms whose functions start empty each time wil
 lose every lesson unless the database moves to a hosted one first - that means
 rewriting `lib/db.ts`, and nothing above it.
 
-Deployed at **https://linguatrace-e04587.fly.dev**. The name is deliberately
-unguessable: the app has no accounts, so the URL is the only thing keeping a
-lesson private.
+Deployed at **https://linguatrace-e04587.fly.dev**.
 
 A `Dockerfile` and `fly.toml` are included:
 

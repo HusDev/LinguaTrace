@@ -1,27 +1,39 @@
 import { NextResponse } from "next/server";
 import { createSession, generateClientToken, vonageConfigured } from "@/lib/vonage";
-import { getVideoSession, saveVideoSession } from "@/lib/db";
-import { DEFAULT_LEARNER, createLesson, ensureLearner, getLesson } from "@/lib/store";
+import {
+  getAccount,
+  getLessonParticipants,
+  getVideoSession,
+  saveVideoSession,
+  setLessonLearner,
+} from "@/lib/db";
+import { createLesson, getLesson, upsertLearnerFromAccount } from "@/lib/store";
+import { currentAccount } from "@/lib/auth";
 import { jevConfigured } from "@/lib/jev";
-import { TUTOR_NAME, mockLessonTurns } from "@/lib/mockLesson";
+import { mockLessonTurns } from "@/lib/mockLesson";
 
 export const runtime = "nodejs";
 
-function shell(lessonId: string, learnerId: string, learnerName: string) {
+function shell(
+  lessonId: string,
+  learnerName: string,
+  tutorName: string,
+  learnerId: string,
+) {
   return {
     lessonId,
+    /* Whose history this lesson belongs to. The tutor's copilot reads the
+       learner's past lessons, not their own. */
+    learnerId,
     // The server owns the lesson date: formatting it in the browser would make
     // the first render disagree with the server's markup.
     date: new Date().toLocaleDateString("en-GB", {
       day: "numeric",
       month: "short",
     }),
-    learnerId,
     learnerName,
-    tutorName: TUTOR_NAME,
+    tutorName,
     jevConfigured: jevConfigured(),
-    // With the room stubbed, the client drives these turns through /api/classify
-    // at the pace a real call would deliver them.
     scriptedTurns: mockLessonTurns(),
   };
 }
@@ -29,13 +41,17 @@ function shell(lessonId: string, learnerId: string, learnerName: string) {
 /**
  * Start a lesson, or join one already running.
  *
- * Joining matters more than it sounds. Without it two people each opened their
- * own video room and sat waiting for someone who was never coming - the app
- * could only ever be used alone, which is the one way this product does not
- * work. A joiner gets the lesson's existing session with a token of their own.
+ * Who you are decides your side of the conversation. A tutor opens the room and
+ * sends the link; a learner following that link becomes the lesson's learner.
+ * Before accounts this was a control in the header, which meant a lesson could
+ * be mislabelled by a misclick - and a tutor filed as a learner is never asked
+ * whether they just corrected something.
  */
 export async function POST(request: Request) {
-  const learner = ensureLearner(DEFAULT_LEARNER);
+  const me = await currentAccount();
+  if (!me) {
+    return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  }
 
   let join: string | undefined;
   try {
@@ -46,8 +62,26 @@ export async function POST(request: Request) {
 
   if (join) {
     const notebook = getLesson(join);
-    if (!notebook) {
+    const participants = getLessonParticipants(join);
+    if (!notebook || !participants) {
       return NextResponse.json({ error: "That lesson does not exist." }, { status: 404 });
+    }
+
+    /* A tutor's lesson starts with a placeholder learner. The first learner to
+       follow the invite becomes the lesson's learner for good; a second one
+       would rewrite whose history this lesson belongs to. */
+    if (me.role === "learner") {
+      const claimed = getAccount(participants.learnerId);
+      const unclaimed = !claimed || claimed.role === "tutor";
+      if (unclaimed || participants.learnerId === me.id) {
+        upsertLearnerFromAccount(me);
+        setLessonLearner(join, me.id);
+      } else if (participants.learnerId !== me.id) {
+        return NextResponse.json(
+          { error: "This lesson already belongs to another learner." },
+          { status: 403 },
+        );
+      }
     }
 
     const sessionId = getVideoSession(join);
@@ -58,10 +92,12 @@ export async function POST(request: Request) {
       );
     }
 
+    const fresh = getLesson(join)!;
     return NextResponse.json({
-      ...shell(join, learner.id, notebook.learnerName),
+      ...shell(join, fresh.learnerName, fresh.tutorName, getLessonParticipants(join)!.learnerId),
       joined: true,
-      notebook,
+      me,
+      notebook: fresh,
       session: {
         sessionId,
         // A token per participant, not a shared one.
@@ -72,19 +108,29 @@ export async function POST(request: Request) {
     });
   }
 
+  /* Starting a lesson. A learner starting alone is their own learner; a tutor
+     starting one holds the room until someone joins. */
+  upsertLearnerFromAccount(me);
   const lessonId = `lesson-${Date.now().toString(36)}`;
-  createLesson(lessonId, learner.id, TUTOR_NAME);
+  const tutorName = me.role === "tutor" ? me.name : "your tutor";
+  createLesson(lessonId, me.id, tutorName, me.role === "tutor" ? me.id : undefined);
+
   const session = await createSession(lessonId);
   if (session.live) saveVideoSession(lessonId, session.sessionId);
 
+  const notebook = getLesson(lessonId)!;
   return NextResponse.json({
-    ...shell(lessonId, learner.id, learner.name),
+    ...shell(lessonId, notebook.learnerName, tutorName, me.id),
     joined: false,
+    me,
     session,
   });
 }
 
 export async function GET(request: Request) {
+  const me = await currentAccount();
+  if (!me) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+
   const lessonId = new URL(request.url).searchParams.get("lessonId");
   if (!lessonId) {
     return NextResponse.json({ error: "lessonId is required" }, { status: 400 });

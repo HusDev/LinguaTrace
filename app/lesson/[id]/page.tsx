@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { NotebookPage } from "@/components/Notebook";
-import { getLearner, listLessons, loadNotebook } from "@/lib/db";
-import { DEFAULT_LEARNER } from "@/lib/store";
+import { redirect } from "next/navigation";
+import { getLearner, getLessonParticipants, listLessons, loadNotebook } from "@/lib/db";
+import { currentAccount } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -20,11 +21,20 @@ export default async function LessonRecord({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const notebook = loadNotebook(id);
-  if (!notebook) notFound();
 
-  const learner = getLearner(DEFAULT_LEARNER.id);
-  const lessons = listLessons(DEFAULT_LEARNER.id);
+  const me = await currentAccount();
+  if (!me) redirect(`/login?next=${encodeURIComponent(`/lesson/${id}`)}`);
+
+  const notebook = loadNotebook(id);
+  const participants = getLessonParticipants(id);
+  if (!notebook || !participants) notFound();
+
+  // A lesson is readable by the two people who were in it.
+  const mine = me.id === participants.learnerId || me.id === participants.tutorId;
+  if (!mine) notFound();
+
+  const learner = getLearner(participants.learnerId);
+  const lessons = listLessons(participants.learnerId);
   const index = lessons.findIndex((l) => l.id === id);
   const earlier = lessons.slice(index + 1).find((l) => l.endedAt !== null);
   const previous = earlier ? (loadNotebook(earlier.id) ?? undefined) : undefined;
