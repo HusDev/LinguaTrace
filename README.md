@@ -369,6 +369,10 @@ filesystem between requests. Platforms whose functions start empty each time wil
 lose every lesson unless the database moves to a hosted one first - that means
 rewriting `lib/db.ts`, and nothing above it.
 
+Deployed at **https://linguatrace-e04587.fly.dev**. The name is deliberately
+unguessable: the app has no accounts, so the URL is the only thing keeping a
+lesson private.
+
 A `Dockerfile` and `fly.toml` are included:
 
 ```bash

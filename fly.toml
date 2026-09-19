@@ -1,23 +1,30 @@
-# fly launch --no-deploy  will rewrite app/primary_region for your account.
-app = "linguatrace"
-primary_region = "lhr"
+# fly.toml app configuration file generated for linguatrace-e04587 on 2026-09-19T17:49:07+02:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'linguatrace-e04587'
+primary_region = 'lhr'
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = 'Dockerfile'
 
 [env]
-  LINGUATRACE_DB = "/data/linguatrace.db"
+  LINGUATRACE_DB = '/data/linguatrace.db'
 
-# Lessons are stored on disk, so the machine keeps one between deploys.
 [[mounts]]
-  source = "linguatrace_data"
-  destination = "/data"
+  source = 'linguatrace_data'
+  destination = '/data'
 
 [http_service]
   internal_port = 3000
   force_https = true
-  # A lesson is a live WebSocket and a video call; stopping the machine
-  # mid-lesson would drop both.
-  auto_stop_machines = false
+  auto_stop_machines = 'off'
   auto_start_machines = true
   min_machines_running = 1
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 1024
