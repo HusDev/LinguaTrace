@@ -87,11 +87,21 @@ export interface TranscriptionStreams {
 
 export function useLiveTranscription({
   enabled,
+  muted,
   streams,
   onFinalTurn,
   onError,
 }: {
   enabled: boolean;
+  /**
+   * Silence this device's microphone.
+   *
+   * Silence is sent rather than nothing at all: voice activity detection needs a
+   * continuous stream to know where an utterance ends, and a gap would both
+   * confuse it and risk the session idling out. The cost is the same and the
+   * words never leave the room.
+   */
+  muted: boolean;
   streams: TranscriptionStreams;
   onFinalTurn: (speaker: Speaker, text: string) => void;
   onError: (message: string) => void;
@@ -118,10 +128,15 @@ export function useLiveTranscription({
 
   const finalRef = useRef(onFinalTurn);
   const errorRef = useRef(onError);
+  /* Read inside the audio callback, which fires far more often than renders. */
+  const mutedRef = useRef(muted);
   useEffect(() => {
     finalRef.current = onFinalTurn;
     errorRef.current = onError;
   }, [onFinalTurn, onError]);
+  useEffect(() => {
+    mutedRef.current = muted;
+  }, [muted]);
 
   /**
    * Take a finalised fragment, holding it briefly in case the speaker was only
@@ -306,10 +321,11 @@ export function useLiveTranscription({
         const source = context.createMediaStreamSource(stream);
         const node = new AudioWorkletNode(context, "forward-processor");
 
+        const silence = new Float32Array(FRAME_SIZE);
         node.port.onmessage = (event: MessageEvent<Float32Array>) => {
           session.sendRealtimeInput({
             audio: {
-              data: toBase64Pcm(event.data),
+              data: toBase64Pcm(mutedRef.current ? silence : event.data),
               mimeType: `audio/pcm;rate=${SAMPLE_RATE}`,
             },
           });

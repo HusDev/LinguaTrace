@@ -65,6 +65,14 @@ const MicIcon = (
   </svg>
 );
 
+const MicOffIcon = (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+    <path d="M9 5.5A3 3 0 0 1 15 5.5v5M9 10v1a3 3 0 0 0 4.5 2.6" />
+    <path d="M5.5 11a6.5 6.5 0 0 0 10 5.5M12 17.5V21" />
+    <path d="M4 3l16 18" />
+  </svg>
+);
+
 const CameraIcon = (
   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 7.5h4l1.5-2h7L17 7.5h4v11H3z" />
@@ -161,7 +169,7 @@ export function LiveRail(props: RailProps) {
                 ? "Scripted lesson"
                 : listening
                   ? `Live · ${transcribingWith ? `${transcribingWith} listening` : "listening"}`
-                  : "Live · room open"}
+                  : "Live · muted"}
             </Pill>
           ) : (
             <Pill tone="muted">Not started</Pill>
@@ -170,17 +178,15 @@ export function LiveRail(props: RailProps) {
 
         <div className="flex gap-2 mb-3">
           <ControlButton
-            icon={MicIcon}
-            label={listening ? "Listening" : "Listen"}
+            icon={listening ? MicIcon : MicOffIcon}
+            label={listening ? "Mute" : "Muted"}
             active={listening}
-            disabled={!started || !live || !props.speechAvailable}
+            disabled={!started || (!live && !props.speechAvailable)}
             onClick={props.onToggleListening}
             title={
-              !props.speechAvailable
-                ? "This browser cannot transcribe and there is no room to listen to"
-                : live
-                  ? "Transcribe the lesson with Gemini, one session per speaker"
-                  : "Transcribe this microphone"
+              live
+                ? "Silence this device: it stops sending audio to the room and stops transcribing"
+                : "Transcribe this microphone"
             }
           />
           <ControlButton

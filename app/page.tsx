@@ -130,7 +130,10 @@ export default function LessonRoom() {
   const myRole: Speaker = me?.role ?? "learner";
   const [draft, setDraft] = useState("");
   const [streams, setStreams] = useState<RoomStreams>({ local: null, remote: null });
-  const [transcribing, setTranscribing] = useState(false);
+  /* The microphone is the switch. Transcription starts with the room and pauses
+     while muted, so there is one control rather than two that overlap: a mic
+     button that does not stop the notes is not a mute. */
+  const [micOn, setMicOn] = useState(true);
   const [panel, setPanel] = useState<"notes" | "whiteboard">("notes");
   /* On a phone the call and the notes cannot share a screen, so they become two
      panes. Stacked, the notebook - the thing the learner keeps - sat several
@@ -200,7 +203,8 @@ export default function LessonRoom() {
      browser cannot know, so it comes from what the user says their own role is:
      this device is `myRole`, and the other end is the other role. */
   const transcription = useLiveTranscription({
-    enabled: transcribing && Boolean(session),
+    enabled: Boolean(session),
+    muted: !micOn,
     /* Each device transcribes its own microphone and nothing else.
        Transcribing both streams meant both people transcribed both voices, so
        every sentence was sent twice and appeared under both names. It also has
@@ -286,7 +290,7 @@ export default function LessonRoom() {
     setPack(null);
     setCaptures([]);
     setOutcomes({});
-    setTranscribing(false);
+    setMicOn(true);
     setPrevious(notebook.turns.length > 0 ? notebook : previous);
 
     const res = await fetch("/api/lesson", {
@@ -375,7 +379,6 @@ export default function LessonRoom() {
   async function endLesson() {
     if (!lessonId) return;
     speech.stop();
-    setTranscribing(false);
     setPhase("ended");
     const res = await fetch("/api/pack", {
       method: "POST",
@@ -434,13 +437,20 @@ export default function LessonRoom() {
     );
   }
 
-  /** Prefer Gemini: it hears both sides and labels them. The browser recogniser
-      is only a fallback when there is no room to listen to. */
-  function toggleListening() {
+  /**
+   * Mute this device.
+   *
+   * Two machines in one room hear each other, so silencing one is what stops the
+   * same sentence being transcribed twice under two names. Muting stops the
+   * audio reaching the room and the transcription alike; a mic button that left
+   * the notes running would not be a mute.
+   */
+  function toggleMic() {
     if (session) {
-      setTranscribing((on) => !on);
+      setMicOn((on) => !on);
       return;
     }
+    // Without a room, the browser recogniser is the only microphone there is.
     if (speech.listening) speech.stop();
     else speech.start();
   }
@@ -614,7 +624,7 @@ export default function LessonRoom() {
         me={me}
         phase={phase}
         live={live}
-        listening={transcribing || speech.listening}
+        listening={session ? micOn : speech.listening}
         cameraOn={cameraOn}
         reconnecting={reconnecting}
         draft={draft}
@@ -622,7 +632,7 @@ export default function LessonRoom() {
           phase !== "ended" &&
           (mobileTab === "canvas" || (Boolean(session) && cameraOn))
         }
-        onToggleListening={toggleListening}
+        onToggleListening={toggleMic}
         onToggleCamera={() => setCameraOn((c) => !c)}
         onCapture={() => void capture(mobileTab === "canvas")}
         onDraft={setDraft}
@@ -641,6 +651,7 @@ export default function LessonRoom() {
               sessionId={session.sessionId}
               token={session.token}
               cameraOn={cameraOn}
+              micOn={micOn}
               layout="stage"
               tutorName={notebook.tutorName}
               learnerName={notebook.learnerName}
@@ -698,11 +709,11 @@ export default function LessonRoom() {
           previous={previous}
           phase={phase}
           live={live}
-          listening={transcribing || speech.listening}
+          listening={session ? micOn : speech.listening}
           interim={interimText}
           outcomes={outcomes}
           transcribingLive={transcribingLive}
-          transcribingWith={transcribing ? "Gemini" : null}
+          transcribingWith={session && micOn ? "Gemini" : null}
           reconnecting={reconnecting}
           cameraOn={cameraOn}
           myRole={myRole}
@@ -712,7 +723,7 @@ export default function LessonRoom() {
             (panel === "whiteboard" || (Boolean(session) && cameraOn))
           }
           speechAvailable={speechAvailable || Boolean(session)}
-          onToggleListening={toggleListening}
+          onToggleListening={toggleMic}
           onToggleCamera={() => setCameraOn((c) => !c)}
           onCapture={() => void capture()}
           captureSource={panel === "whiteboard" ? "whiteboard" : "camera"}
@@ -728,6 +739,7 @@ export default function LessonRoom() {
                 sessionId={session.sessionId}
                 token={session.token}
                 cameraOn={cameraOn}
+                micOn={micOn}
                 tutorName={notebook.tutorName}
                 learnerName={notebook.learnerName}
                 onStatus={setStatus}

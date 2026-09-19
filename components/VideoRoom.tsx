@@ -53,6 +53,8 @@ interface Props {
   sessionId: string;
   token: string;
   cameraOn: boolean;
+  /** False stops this device sending any audio into the room. */
+  micOn: boolean;
   tutorName: string;
   learnerName: string;
   /**
@@ -103,6 +105,7 @@ export function VideoRoom({
   sessionId,
   token,
   cameraOn,
+  micOn,
   tutorName,
   learnerName,
   layout = "tiles",
@@ -187,6 +190,7 @@ export function VideoRoom({
             width: "100%",
             height: "100%",
             publishVideo: cameraOn,
+            publishAudio: micOn,
             showControls: false,
           },
           (publishErr: Error | undefined) => {
@@ -282,6 +286,17 @@ export function VideoRoom({
       // The publisher may not exist yet; the initial state already covers it.
     }
   }, [cameraOn]);
+
+  /* Muting stops the audio track, so the other person hears nothing from this
+     device - which is what keeps two machines in one room from hearing, and
+     transcribing, each other. */
+  useEffect(() => {
+    try {
+      publisherRef.current?.publishAudio(micOn);
+    } catch {
+      // Same: the initial publish state already carries it.
+    }
+  }, [micOn]);
 
   /* The placeholder name already says "tutor"; repeating it reads as a stutter. */
   const tutorLabel = /tutor/i.test(tutorName) ? tutorName : `${tutorName} · tutor`;

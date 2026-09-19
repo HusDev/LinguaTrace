@@ -82,7 +82,12 @@ audio - the raw microphone, before the network.
 
 Microphones still leak. Two devices in one room hear both people, so the same
 sentence can arrive twice under different names; a repeat within seconds is
-dropped as an echo rather than written up as a second turn.
+dropped as an echo rather than written up as a second turn, and the **mic button
+mutes** - stopping both the audio into the room and the transcription, because a
+mic button that left the notes running would not be a mute.
+
+Transcription starts with the room rather than waiting to be switched on. One
+control that silences everything beats two that overlap.
 
 What the browser cannot know is which of those two people is the tutor. That is a
 fact about the people, not about the connection, so it stays a stated setting:

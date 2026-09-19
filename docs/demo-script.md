@@ -6,10 +6,11 @@ Two people, two devices, about three minutes.
 
 - **Two devices.** A laptop for the tutor, a phone for the learner. Two tabs on
   one machine will not work: they cannot both open the camera.
-- **Headphones on at least one device**, or sit in different rooms. Each device
-  transcribes its own microphone, so without headphones the tutor's microphone
-  also hears the learner and files their sentence under the tutor's name. A
-  repeated sentence is dropped as an echo, but the attribution is still wrong.
+- **Headphones, or mute one device.** Each device transcribes its own
+  microphone, so two machines in one room hear each other and file the wrong
+  person's sentence. The **mic button mutes**: it stops that device sending audio
+  to the room and stops it transcribing. Demoing both roles yourself? Mute the
+  one you are not speaking into.
 - **Two accounts**, made in advance: one tutor, one learner. Set the learner's
   languages (Learning English, Speaks Spanish) so the glosses appear.
 - **Do not open with "can you hear me".** The app deliberately ignores speech

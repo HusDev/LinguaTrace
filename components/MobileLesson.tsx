@@ -68,6 +68,14 @@ const MicIcon = (
   </svg>
 );
 
+const MicOffIcon = (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+    <path d="M9 5.5A3 3 0 0 1 15 5.5v5M9 10v1a3 3 0 0 0 4.5 2.6" />
+    <path d="M5.5 11a6.5 6.5 0 0 0 10 5.5M12 17.5V21" />
+    <path d="M4 3l16 18" />
+  </svg>
+);
+
 const CameraIcon = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
     <rect x="2.5" y="6" width="13" height="12" rx="2.5" />
@@ -178,7 +186,7 @@ export function MobileLesson(props: MobileLessonProps) {
       : live
         ? props.listening
           ? "Live"
-          : "Room open"
+          : "Muted"
         : "Scripted";
 
   return (
@@ -355,8 +363,8 @@ export function MobileLesson(props: MobileLessonProps) {
             {started && (
               <div className="shrink-0 flex items-center justify-center gap-5 rounded-full border border-panel-edge bg-panel px-5 py-2.5">
                 <RoundButton
-                  icon={MicIcon}
-                  label={props.listening ? "Stop listening" : "Start listening"}
+                  icon={props.listening ? MicIcon : MicOffIcon}
+                  label={props.listening ? "Mute the microphone" : "Unmute the microphone"}
                   active={props.listening}
                   disabled={!live}
                   onClick={props.onToggleListening}
