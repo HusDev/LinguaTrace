@@ -141,6 +141,16 @@ whiteboard. Replacing the notebook with a canvas would have been the tempting
 move and the wrong one: the Lesson Pack is generated from structured entries, and
 a drawing surface has none to give it.
 
+**Both people draw on the same board.** Changes travel over the lesson's own
+Vonage session rather than a second realtime service to run, pay for and explain,
+which also scopes the board to the call by construction: you can only draw with
+someone you are in a room with. Someone arriving mid-lesson asks for the board
+and is sent it.
+
+A signal carries at most 8KB. A stroke never approaches that; a whole board does,
+so large messages are split and rebuilt, and pieces of two messages in flight at
+once are kept apart.
+
 The board stays mounted while the notes are showing, so switching tabs never
 loses a drawing.
 

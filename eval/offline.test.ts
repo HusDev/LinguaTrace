@@ -10,6 +10,7 @@
 
 import { contextSentence, sentences, vocabularyCandidates } from "../lib/jev";
 import { continuesTurn, holdFor, joinFragments } from "../lib/transcriptMerge";
+import { createDecoder, encode } from "../lib/boardSync";
 import { buildLessonPack } from "../lib/lessonPack";
 import { emptyNotebook, type Notebook } from "../lib/types";
 
@@ -44,6 +45,54 @@ check(
   "drops stopwords as standalone candidates",
   !candidates.includes("the") && !candidates.includes("is"),
 );
+
+console.log("\nboardSync()");
+/* A signal carries at most 8KB. A stroke never approaches that; a whole board
+   does, so large messages are split and have to come back out whole. */
+const smallParts = encode({ kind: "hello", from: "abc" });
+check("a small message travels in one piece", smallParts.length === 1);
+check(
+  "and every piece fits in a signal",
+  smallParts.every((p) => p.length < 8192),
+);
+
+const big = {
+  kind: "snapshot" as const,
+  from: "abc",
+  snapshot: { shapes: Array.from({ length: 400 }, (_, i) => ({ id: `shape:${i}`, text: "x".repeat(60) })) },
+};
+const bigParts = encode(big);
+check("a whole board is split", bigParts.length > 1, `${bigParts.length} parts`);
+check(
+  "no piece exceeds the signal limit",
+  bigParts.every((p) => p.length < 8192),
+  `largest ${Math.max(...bigParts.map((p) => p.length))}`,
+);
+
+const decode = createDecoder();
+const rebuilt = bigParts.map((p) => decode(p)).filter(Boolean);
+check("nothing is delivered until the last piece", rebuilt.length === 1);
+check(
+  "and it rebuilds exactly",
+  JSON.stringify(rebuilt[0]) === JSON.stringify(big),
+);
+
+/* Two messages can be in flight at once, and their pieces interleave. */
+const decode2 = createDecoder();
+const a = encode({ kind: "snapshot", from: "a", snapshot: { pad: "a".repeat(9000) } });
+const b = encode({ kind: "snapshot", from: "b", snapshot: { pad: "b".repeat(9000) } });
+const interleaved: unknown[] = [];
+for (let i = 0; i < Math.max(a.length, b.length); i += 1) {
+  if (a[i]) interleaved.push(decode2(a[i]));
+  if (b[i]) interleaved.push(decode2(b[i]));
+}
+const done = interleaved.filter(Boolean) as Array<{ from: string }>;
+check(
+  "interleaved messages do not corrupt each other",
+  done.length === 2 && new Set(done.map((m) => m.from)).size === 2,
+  JSON.stringify(done.map((m) => m.from)),
+);
+check("rubbish is ignored rather than thrown", decode2("not json") === null);
 
 console.log("\ntranscriptMerge()");
 /* Voice activity detection splits a sentence at a breath. These are the real

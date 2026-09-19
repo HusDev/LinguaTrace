@@ -21,6 +21,17 @@ type OTStream = any;
 export interface RoomApi {
   /** The current local frame as a PNG data URL, or null if there is no video. */
   capture: () => string | null;
+  /**
+   * Send a message to the other person in the room.
+   *
+   * The session is already open and already scoped to these two people, so the
+   * whiteboard rides it rather than needing a realtime service of its own.
+   */
+  signal: (type: string, data: string) => void;
+  /** Listen for those messages. Returns a function that stops listening. */
+  onSignal: (type: string, handler: (data: string) => void) => () => void;
+  /** Called when someone else joins, so they can be sent the board so far. */
+  onPeerJoined: (handler: () => void) => () => void;
 }
 
 /**
@@ -185,7 +196,35 @@ export function VideoRoom({
         publisherRef.current = publisher;
         session.publish(publisher);
 
+        /* The SDK types `on` with a literal `signal:${string}`, which a name
+           built at runtime cannot satisfy; this boundary is already untyped. */
+        const bus: OTSession = session;
+
         onReady({
+          signal: (type: string, data: string) => {
+            try {
+              session.signal({ type, data });
+            } catch {
+              // A closed session simply cannot carry the message.
+            }
+          },
+          onSignal: (type: string, handler: (data: string) => void) => {
+            const wrapped = (event: { data?: string; from?: { connectionId?: string } }) => {
+              // Our own signals come back to us; the sender ignores them.
+              if (event.from?.connectionId === session.connection?.connectionId) return;
+              if (typeof event.data === "string") handler(event.data);
+            };
+            bus.on(`signal:${type}`, wrapped);
+            return () => bus.off(`signal:${type}`, wrapped);
+          },
+          onPeerJoined: (handler: () => void) => {
+            const wrapped = (event: { connection?: { connectionId?: string } }) => {
+              if (event.connection?.connectionId === session.connection?.connectionId) return;
+              handler();
+            };
+            bus.on("connectionCreated", wrapped);
+            return () => bus.off("connectionCreated", wrapped);
+          },
           /* The publisher renders into a <video> we own, so a frame can be
              copied straight off it. Nothing is uploaded: the capture stays in
              the page as a data URL, like a photo taped into a paper notebook. */

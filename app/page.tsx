@@ -10,7 +10,8 @@ import { LiveRail } from "@/components/LiveRail";
 import { TutorView } from "@/components/TutorView";
 import { MobileLesson, type MobileTab } from "@/components/MobileLesson";
 import type { RoomApi, RoomStreams } from "@/components/VideoRoom";
-import type { WhiteboardApi } from "@/components/Whiteboard";
+import type { BoardSync, WhiteboardApi } from "@/components/Whiteboard";
+import { BOARD_SIGNAL } from "@/lib/boardSync";
 import type { LessonPack } from "@/lib/lessonPack";
 import { useSpeech, useSpeechSupported } from "@/lib/useSpeech";
 import { useIsDesktop } from "@/lib/useIsDesktop";
@@ -250,8 +251,21 @@ export default function LessonRoom() {
     };
   }, [phase, lessonId, live, sendTurn]);
 
+  /* The board rides the video session. It exists only once the room is ready,
+     and the whiteboard falls back to a private canvas without it. */
+  const [boardSync, setBoardSync] = useState<BoardSync | null>(null);
+
   const handleReady = useCallback((api: RoomApi | null) => {
     roomApi.current = api;
+    setBoardSync(
+      api
+        ? {
+            send: (data) => api.signal(BOARD_SIGNAL, data),
+            subscribe: (handler) => api.onSignal(BOARD_SIGNAL, handler),
+            onPeerJoined: (handler) => api.onPeerJoined(handler),
+          }
+        : null,
+    );
   }, []);
 
   const handleStreams = useCallback((next: RoomStreams) => setStreams(next), []);
@@ -259,6 +273,7 @@ export default function LessonRoom() {
   const handleBoardReady = useCallback((api: WhiteboardApi | null) => {
     boardApi.current = api;
   }, []);
+
 
   const startLesson = useCallback(
     async (join?: string) => {
@@ -645,7 +660,7 @@ export default function LessonRoom() {
             />
           )
         }
-        canvas={<Whiteboard onReady={handleBoardReady} />}
+        canvas={<Whiteboard onReady={handleBoardReady} sync={boardSync} />}
         pack={
           pack ? (
             <div className="rounded-2xl bg-panel border border-panel-edge p-4">
@@ -761,7 +776,7 @@ export default function LessonRoom() {
                     panel === "whiteboard" ? "" : "invisible pointer-events-none"
                   }`}
                 >
-                  <Whiteboard onReady={handleBoardReady} />
+                  <Whiteboard onReady={handleBoardReady} sync={boardSync} />
                 </div>
                 <div
                   className={`absolute inset-0 overflow-y-auto ${
