@@ -15,6 +15,10 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# The tldraw licence is read in the browser, so it is inlined into the bundle
+# during the build. A runtime secret would never reach it.
+ARG NEXT_PUBLIC_TLDRAW_LICENSE_KEY=""
+ENV NEXT_PUBLIC_TLDRAW_LICENSE_KEY=$NEXT_PUBLIC_TLDRAW_LICENSE_KEY
 RUN npm run build
 
 FROM node:24-slim AS run

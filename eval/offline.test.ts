@@ -10,7 +10,7 @@
 
 import { contextSentence, sentences, vocabularyCandidates } from "../lib/jev";
 import { continuesTurn, holdFor, joinFragments } from "../lib/transcriptMerge";
-import { createDecoder, encode } from "../lib/boardSync";
+import { createDecoder, encode, isEmpty, mergeChanges } from "../lib/boardSync";
 import { buildLessonPack } from "../lib/lessonPack";
 import { emptyNotebook, type Notebook } from "../lib/types";
 
@@ -93,6 +93,27 @@ check(
   JSON.stringify(done.map((m) => m.from)),
 );
 check("rubbish is ignored rather than thrown", decode2("not json") === null);
+
+/* One stroke emits an update per pointer move, so they are folded together
+   before being sent. */
+check("an empty batch is recognised", isEmpty(mergeChanges({}, {})));
+const folded = mergeChanges(
+  mergeChanges({}, { added: { "shape:1": { v: 1 } } }),
+  { updated: { "shape:1": [{ v: 1 }, { v: 2 }] } },
+);
+check(
+  "an update to something just added stays an addition",
+  JSON.stringify(folded.added?.["shape:1"]) === JSON.stringify({ v: 2 }) &&
+    Object.keys(folded.updated ?? {}).length === 0,
+  JSON.stringify(folded),
+);
+const undone = mergeChanges(folded, { removed: { "shape:1": { v: 2 } } });
+check(
+  "something drawn then deleted is not sent as an addition",
+  Object.keys(undone.added ?? {}).length === 0 &&
+    Object.keys(undone.removed ?? {}).length === 1,
+  JSON.stringify(undone),
+);
 
 console.log("\ntranscriptMerge()");
 /* Voice activity detection splits a sentence at a breath. These are the real

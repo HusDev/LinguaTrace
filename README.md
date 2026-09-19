@@ -154,8 +154,12 @@ once are kept apart.
 The board stays mounted while the notes are showing, so switching tabs never
 loses a drawing.
 
-Built on [tldraw](https://tldraw.dev). Its SDK shows a "get a license for
-production" watermark unless you hold a commercial licence.
+Built on [tldraw](https://tldraw.dev), under a commercial licence.
+
+The licence key is read in the browser, so it is inlined when the app is **built**
+rather than read from the environment when it runs. A runtime secret would never
+reach it: pass it as a build argument (`--build-arg`) or the deployed app shows
+the watermark even though the key is set.
 
 ## The gate: two narrow questions
 

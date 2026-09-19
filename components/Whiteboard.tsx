@@ -3,7 +3,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { Tldraw, type Editor } from "tldraw";
 import "tldraw/tldraw.css";
-import { BOARD_SIGNAL, createDecoder, encode, type BoardMessage } from "@/lib/boardSync";
+import {
+  BOARD_SIGNAL,
+  FLUSH_MS,
+  createDecoder,
+  encode,
+  isEmpty,
+  mergeChanges,
+  type BoardMessage,
+  type StoreChanges,
+} from "@/lib/boardSync";
 
 /**
  * The shared whiteboard.
@@ -74,10 +83,27 @@ export function Whiteboard({
       for (const part of encode(message)) sync.send(part);
     };
 
+    /* Changes are collected and sent a few times a second rather than on every
+       store write. Drawing one stroke emits an update per pointer move, and a
+       signal each floods the channel. */
+    let pending: StoreChanges = {};
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const flush = () => {
+      timer = null;
+      if (isEmpty(pending)) return;
+      const changes = pending;
+      pending = {};
+      send({ kind: "diff", from: me, changes });
+    };
+
     /* Only what this person did is broadcast. Without the `user` source filter
        the changes arriving from the other side would be echoed straight back. */
     const stopListening = editor.store.listen(
-      ({ changes }) => send({ kind: "diff", from: me, changes }),
+      ({ changes }) => {
+        pending = mergeChanges(pending, changes as StoreChanges);
+        if (!timer) timer = setTimeout(flush, FLUSH_MS);
+      },
       { source: "user", scope: "document" },
     );
 
@@ -92,35 +118,37 @@ export function Whiteboard({
       }
 
       /* `mergeRemoteChanges` marks these as not ours, so they are applied
-         without being broadcast again and bouncing between the two boards. */
-      editor.store.mergeRemoteChanges(() => {
-        if (message.kind === "snapshot") {
-          // Only take a snapshot when there is nothing to lose by it.
-          if (editor.getCurrentPageShapeIds().size === 0) {
-            editor.store.loadStoreSnapshot(
-              message.snapshot as Parameters<typeof editor.store.loadStoreSnapshot>[0],
-            );
+         without being broadcast again and bouncing between the two boards.
+         A batch that cannot be applied - a record referring to something this
+         side has not seen - must not take the whole board down with it. */
+      try {
+        editor.store.mergeRemoteChanges(() => {
+          if (message.kind === "snapshot") {
+            // Only take a snapshot when there is nothing to lose by it.
+            if (editor.getCurrentPageShapeIds().size === 0) {
+              editor.store.loadStoreSnapshot(
+                message.snapshot as Parameters<typeof editor.store.loadStoreSnapshot>[0],
+              );
+            }
+            return;
           }
-          return;
-        }
 
-        const changes = message.changes as {
-          added?: Record<string, unknown>;
-          updated?: Record<string, [unknown, unknown]>;
-          removed?: Record<string, unknown>;
-        };
-        const put = [
-          ...Object.values(changes.added ?? {}),
-          ...Object.values(changes.updated ?? {}).map(([, after]) => after),
-        ];
-        if (put.length) {
-          editor.store.put(put as Parameters<typeof editor.store.put>[0]);
-        }
-        const removed = Object.keys(changes.removed ?? {});
-        if (removed.length) {
-          editor.store.remove(removed as Parameters<typeof editor.store.remove>[0]);
-        }
-      });
+          const changes = message.changes as StoreChanges;
+          const put = [
+            ...Object.values(changes.added ?? {}),
+            ...Object.values(changes.updated ?? {}).map(([, after]) => after),
+          ];
+          if (put.length) {
+            editor.store.put(put as Parameters<typeof editor.store.put>[0]);
+          }
+          const removed = Object.keys(changes.removed ?? {});
+          if (removed.length) {
+            editor.store.remove(removed as Parameters<typeof editor.store.remove>[0]);
+          }
+        });
+      } catch {
+        // Drop this batch; the next one, or a snapshot, will put things right.
+      }
     });
 
     // Ask for the board when arriving, and offer it when someone else arrives.
@@ -130,6 +158,7 @@ export function Whiteboard({
     });
 
     return () => {
+      if (timer) clearTimeout(timer);
       stopListening();
       stopReceiving();
       stopPeerWatch();
@@ -138,7 +167,13 @@ export function Whiteboard({
 
   return (
     <div className="absolute inset-0">
-      <Tldraw onMount={handleMount} />
+      {/* Read in the browser, so it is inlined at build time rather than read
+          from the server's environment at runtime. Without it tldraw draws a
+          "license required" watermark over the canvas. */}
+      <Tldraw
+        onMount={handleMount}
+        licenseKey={process.env.NEXT_PUBLIC_TLDRAW_LICENSE_KEY}
+      />
     </div>
   );
 }

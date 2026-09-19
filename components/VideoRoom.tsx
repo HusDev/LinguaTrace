@@ -199,13 +199,26 @@ export function VideoRoom({
         /* The SDK types `on` with a literal `signal:${string}`, which a name
            built at runtime cannot satisfy; this boundary is already untyped. */
         const bus: OTSession = session;
+        let signalFailed = false;
 
         onReady({
           signal: (type: string, data: string) => {
+            /* Reported once rather than on every failure: a channel that has
+               stopped carrying messages fails on every one of them, and silence
+               here was hiding it completely. */
             try {
-              session.signal({ type, data });
-            } catch {
-              // A closed session simply cannot carry the message.
+              session.signal({ type, data }, (err: Error | undefined) => {
+                if (err && !signalFailed) {
+                  signalFailed = true;
+                  onStatus(`The shared whiteboard stopped syncing: ${err.message}`);
+                }
+              });
+            } catch (err) {
+              if (!signalFailed) {
+                signalFailed = true;
+                const m = err instanceof Error ? err.message : "unknown";
+                onStatus(`The shared whiteboard stopped syncing: ${m}`);
+              }
             }
           },
           onSignal: (type: string, handler: (data: string) => void) => {
