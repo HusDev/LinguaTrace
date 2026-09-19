@@ -9,6 +9,9 @@ of them takes notes.
 
 ## What it looks like
 
+**[Watch the 21-second demo](brag-output/brag.mp4)** — download it from GitHub to
+play; the source composition that renders it is beside it.
+
 ![The lesson notebook filling in as a lesson runs](docs/screenshots/lesson-notebook.jpg)
 
 A live lesson. The call is on the left with the running transcript, each turn

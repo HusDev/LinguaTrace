@@ -1,0 +1,1145 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>LinguaTrace — brag</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "Inter";
+        src: url("assets/fonts/inter-var.woff2") format("woff2");
+        font-weight: 100 900;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "Caveat";
+        src: url("assets/fonts/caveat-var.woff2") format("woff2");
+        font-weight: 400 700;
+        font-style: normal;
+        font-display: block;
+      }
+
+      /* Palette lifted verbatim from LinguaTrace app/globals.css */
+      :root {
+        --desk: #241b16;
+        --panel: #2f251e;
+        --panel-raised: #3a2e25;
+        --panel-edge: #4a3a2e;
+        --on-desk: #f2ebe3;
+        --on-desk-soft: #a99a8d;
+        --accent: #8fd9ac;
+        --accent-bg: #2c5741;
+        --paper: #fbf7ec;
+        --paper-rule: #e2ddcb;
+        --paper-margin: #d98a8a;
+        --ink: #2f2a25;
+        --ink-soft: #7d7264;
+        --ink-red: #c0392b;
+        --ink-green: #2e7d4f;
+        --pen-blue: #2f5d9e;
+        --mark-green: #cde8d4;
+        --mark-pink: #f7d9d7;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #241b16;
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: var(--desk);
+        font-family: "Inter", sans-serif;
+        color: var(--on-desk);
+      }
+
+      /* ---- camera: the whole product screen, moved around by the timeline ---- */
+      #camera {
+        position: absolute;
+        inset: 0;
+        transform-origin: 0 0;
+      }
+      #app {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(120% 80% at 18% 24%, #302419 0%, rgba(48, 36, 25, 0) 62%),
+          var(--desk);
+      }
+
+      /* ---------------- header ---------------- */
+      #header {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 84px;
+        background: var(--panel);
+        border-bottom: 1px solid var(--panel-edge);
+        display: flex;
+        align-items: center;
+        gap: 26px;
+        padding: 0 36px;
+      }
+      #logo-mark {
+        width: 46px;
+        height: 46px;
+        border-radius: 11px;
+        background: var(--paper);
+        border: 1px solid #cfc7b4;
+        position: relative;
+        flex: none;
+      }
+      #logo-mark::after {
+        content: "";
+        position: absolute;
+        left: 11px;
+        top: 9px;
+        width: 24px;
+        height: 28px;
+        border-left: 3px solid var(--paper-margin);
+        background: repeating-linear-gradient(
+          to bottom,
+          transparent,
+          transparent 5px,
+          var(--paper-rule) 5px,
+          var(--paper-rule) 7px
+        );
+      }
+      .wordmark-name {
+        font-size: 31px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.05;
+      }
+      .wordmark-sub {
+        font-size: 16px;
+        font-weight: 500;
+        color: var(--on-desk-soft);
+        line-height: 1.4;
+      }
+      #toggle {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: var(--desk);
+        border: 1px solid var(--panel-edge);
+        border-radius: 12px;
+        padding: 5px;
+        margin-left: 18px;
+      }
+      #toggle-knob {
+        position: absolute;
+        top: 5px;
+        left: 5px;
+        width: 116px;
+        height: 42px;
+        border-radius: 9px;
+        background: var(--accent-bg);
+      }
+      .toggle-seg {
+        position: relative;
+        width: 116px;
+        height: 42px;
+        display: grid;
+        place-items: center;
+        font-size: 19px;
+        font-weight: 600;
+        color: var(--on-desk-soft);
+        border-radius: 9px;
+      }
+      #view-label {
+        font-size: 18px;
+        color: var(--on-desk-soft);
+      }
+      #pack-btn {
+        margin-left: auto;
+        background: var(--accent-bg);
+        color: #d8f2e3;
+        font-size: 19px;
+        font-weight: 600;
+        border-radius: 11px;
+        padding: 14px 26px;
+      }
+
+      #statusbar {
+        position: absolute;
+        top: 84px;
+        left: 0;
+        right: 0;
+        height: 46px;
+        display: flex;
+        align-items: center;
+        padding: 0 36px;
+        background: #2a2119;
+        border-bottom: 1px solid var(--panel-raised);
+        font-size: 17px;
+        color: var(--on-desk-soft);
+      }
+
+      /* ---------------- main split ---------------- */
+      #main {
+        position: absolute;
+        top: 154px;
+        left: 24px;
+        right: 24px;
+        bottom: 24px;
+        display: flex;
+        gap: 24px;
+      }
+      #rail {
+        width: 430px;
+        flex: none;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--panel-edge);
+        border-radius: 16px;
+      }
+      #live-card {
+        padding: 22px;
+      }
+      .live-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 18px;
+      }
+      .live-title {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        color: var(--on-desk-soft);
+      }
+      .live-pill {
+        background: var(--accent-bg);
+        color: var(--accent);
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: 999px;
+        padding: 7px 14px;
+      }
+      .ctrl-row {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      .ctrl {
+        flex: 1;
+        height: 84px;
+        border-radius: 12px;
+        background: var(--panel-raised);
+        border: 1px solid var(--panel-edge);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 15px;
+        color: var(--on-desk);
+      }
+      .ctrl.dim {
+        color: #9a9189;
+        background: #342a22;
+      }
+      .glyph {
+        width: 22px;
+        height: 22px;
+        border: 2px solid currentColor;
+        border-radius: 7px;
+        opacity: 0.85;
+      }
+      .glyph.mic {
+        border-radius: 11px;
+        width: 14px;
+        height: 22px;
+      }
+      .glyph.plus {
+        border: none;
+        position: relative;
+      }
+      .glyph.plus::before,
+      .glyph.plus::after {
+        content: "";
+        position: absolute;
+        background: currentColor;
+      }
+      .glyph.plus::before {
+        left: 0;
+        top: 10px;
+        width: 22px;
+        height: 2px;
+      }
+      .glyph.plus::after {
+        left: 10px;
+        top: 0;
+        width: 2px;
+        height: 22px;
+      }
+      .tile-row {
+        display: flex;
+        gap: 12px;
+      }
+      .tile {
+        flex: 1;
+        height: 148px;
+        border-radius: 12px;
+        background: var(--panel-raised);
+        border: 1px solid var(--panel-edge);
+        position: relative;
+        display: grid;
+        place-items: center;
+        font-size: 15px;
+        color: var(--on-desk-soft);
+      }
+      .tile-chip {
+        position: absolute;
+        left: 12px;
+        bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(36, 27, 22, 0.75);
+        border-radius: 999px;
+        padding: 6px 12px;
+        font-size: 14px;
+        color: var(--on-desk);
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--on-desk-soft);
+      }
+      .dot.live {
+        background: var(--accent);
+      }
+
+      #transcript-card {
+        flex: 1;
+        padding: 22px;
+        overflow: hidden;
+      }
+      #turn-2,
+      #turn-3,
+      #turn-4,
+      #t1-tag,
+      #focus-chip,
+      #p-fieldnotes,
+      #p-waiting,
+      .tcard {
+        opacity: 0;
+      }
+      .turn {
+        display: flex;
+        gap: 14px;
+        margin-bottom: 20px;
+      }
+      .avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 999px;
+        flex: none;
+        display: grid;
+        place-items: center;
+        font-size: 16px;
+        font-weight: 600;
+        color: #2f2a25;
+      }
+      .avatar.a {
+        background: var(--mark-green);
+      }
+      .avatar.m {
+        background: var(--mark-pink);
+      }
+      .turn-name {
+        font-size: 15px;
+        color: var(--on-desk-soft);
+        margin-bottom: 4px;
+      }
+      .turn-line {
+        font-size: 20px;
+        font-weight: 500;
+        line-height: 1.34;
+        color: var(--on-desk);
+      }
+      .turn-tag {
+        font-size: 15px;
+        color: var(--accent);
+        margin-top: 6px;
+      }
+
+      /* ---------------- right pane ---------------- */
+      #pane {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        clip-path: inset(0 100% 0 0);
+      }
+      #tabs {
+        height: 56px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .tab {
+        font-size: 19px;
+        font-weight: 600;
+        color: var(--on-desk-soft);
+        border-radius: 10px;
+        padding: 10px 20px;
+      }
+      .tab.active {
+        background: var(--panel-raised);
+        color: var(--on-desk);
+      }
+      #pane-body {
+        flex: 1;
+        position: relative;
+      }
+
+      /* ---- the paper sheet ---- */
+      #sheet {
+        position: absolute;
+        inset: 0;
+        background: var(--paper);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 18px 44px rgba(0, 0, 0, 0.42);
+      }
+      #punches {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 86px;
+      }
+      .punch {
+        position: absolute;
+        left: 30px;
+        width: 24px;
+        height: 24px;
+        border-radius: 999px;
+        background: var(--desk);
+      }
+      #margin-rule {
+        position: absolute;
+        left: 98px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--paper-margin);
+        opacity: 0.6;
+      }
+      #paper-body {
+        position: absolute;
+        left: 130px;
+        right: 54px;
+        top: 56px;
+        height: 720px;
+        background-image: repeating-linear-gradient(
+          to bottom,
+          transparent,
+          transparent 47px,
+          var(--paper-rule) 47px,
+          var(--paper-rule) 48px
+        );
+      }
+      .prow {
+        height: 48px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        color: var(--ink);
+      }
+      .write {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        clip-path: inset(0 100% 0 0);
+      }
+      .hand {
+        font-family: "Caveat", sans-serif;
+        font-size: 40px;
+        line-height: 1;
+        color: var(--ink);
+        white-space: nowrap;
+      }
+      .hand.lead {
+        color: var(--ink-red);
+        font-weight: 700;
+      }
+      .hand.head {
+        font-size: 38px;
+        font-weight: 700;
+        padding: 3px 16px 6px;
+        border-radius: 0.6em 0.3em 0.55em 0.25em;
+      }
+      .hand.head.green {
+        background: var(--mark-green);
+      }
+      .hand.head.pink {
+        background: var(--mark-pink);
+      }
+      .hand.small {
+        font-size: 30px;
+        color: var(--ink-soft);
+      }
+      .hand.blue {
+        color: var(--pen-blue);
+      }
+      .hand.red {
+        color: var(--ink-red);
+      }
+      .hand.green {
+        color: var(--ink-green);
+      }
+      .hand.bold {
+        font-weight: 700;
+      }
+      .meta {
+        font-size: 19px;
+        color: #665c50;
+      }
+      #meta-row {
+        justify-content: space-between;
+      }
+      .mark-tick {
+        font-size: 34px;
+        line-height: 1;
+        width: 26px;
+      }
+
+      .struck {
+        position: relative;
+      }
+      #strike-line {
+        position: absolute;
+        left: -4px;
+        top: 52%;
+        display: block;
+        width: calc(100% + 8px);
+        height: 3px;
+        background: var(--ink-red);
+        transform-origin: 0 50%;
+      }
+      #under-line {
+        position: absolute;
+        left: 0;
+        bottom: -6px;
+        display: block;
+        width: 100%;
+        height: 2px;
+        background-image: linear-gradient(
+          to right,
+          transparent,
+          var(--ink-green) 8%,
+          var(--ink-green) 92%,
+          transparent
+        );
+        transform-origin: 0 50%;
+      }
+      #vocab-underline {
+        position: absolute;
+        left: 0;
+        bottom: -5px;
+        display: block;
+        width: 100%;
+        height: 2px;
+        background: var(--pen-blue);
+        opacity: 0.6;
+      }
+      .pencil {
+        border-bottom: 2px dotted var(--ink-soft);
+        padding-bottom: 4px;
+      }
+      #focus-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        margin-left: auto;
+      }
+      .chip-bars {
+        display: flex;
+        gap: 4px;
+        align-items: flex-end;
+        height: 24px;
+      }
+      .chip-bars i {
+        display: block;
+        width: 8px;
+        background: var(--ink);
+        opacity: 0.8;
+      }
+
+      /* ---- tutor panel (replaces the sheet) ---- */
+      #tutor {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+        opacity: 0;
+      }
+      .tcard {
+        background: var(--panel);
+        border: 1px solid var(--panel-edge);
+        border-radius: 16px;
+        padding: 26px 30px;
+      }
+      .tcard-head {
+        display: flex;
+        align-items: baseline;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+      .tcard-title {
+        font-size: 17px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        color: var(--on-desk-soft);
+      }
+      .tcard-note {
+        font-size: 17px;
+        color: #9a9189;
+      }
+      .tline {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        font-size: 24px;
+        padding: 7px 0;
+      }
+      .tline.faded {
+        color: var(--on-desk-soft);
+      }
+      .flag {
+        color: var(--ink-red);
+        font-size: 22px;
+        margin-right: 12px;
+      }
+      .tquote {
+        font-size: 25px;
+        line-height: 1.35;
+      }
+      .tsub {
+        font-size: 19px;
+        color: var(--on-desk-soft);
+        margin-top: 8px;
+        margin-left: 34px;
+      }
+
+      /* ---------------- overlays (outside the camera) ---------------- */
+      #overlay {
+        position: absolute;
+        inset: 0;
+      }
+      #cap-1 {
+        left: auto;
+        right: 110px;
+        bottom: auto;
+        top: 392px;
+        max-width: 700px;
+      }
+      .caption {
+        position: absolute;
+        left: 80px;
+        bottom: 84px;
+        max-width: 1020px;
+        background: rgba(26, 19, 15, 0.92);
+        border: 1px solid rgba(143, 217, 172, 0.22);
+        border-radius: 16px;
+        padding: 26px 38px;
+        font-size: 42px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        line-height: 1.25;
+        color: var(--on-desk);
+        opacity: 0;
+      }
+      #outro {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+      }
+      #outro-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+        background: var(--desk);
+        border: 1px solid var(--panel-edge);
+        border-radius: 26px;
+        padding: 66px 118px 74px;
+        box-shadow: 0 34px 90px rgba(0, 0, 0, 0.55);
+        opacity: 0;
+      }
+      #outro-name {
+        font-size: 104px;
+        font-weight: 700;
+        letter-spacing: -0.035em;
+        color: var(--paper);
+        opacity: 0;
+      }
+      #outro-line {
+        font-family: "Caveat", sans-serif;
+        font-size: 62px;
+        color: var(--accent);
+        opacity: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="21.5"
+      data-width="1920"
+      data-height="1080"
+    >
+      <div id="camera" data-layout-allow-overflow>
+        <div id="app">
+          <div id="header">
+            <div id="logo-mark"></div>
+            <div>
+              <div class="wordmark-name">LinguaTrace</div>
+              <div class="wordmark-sub">Live lesson companion</div>
+            </div>
+            <div id="toggle">
+              <div id="toggle-knob"></div>
+              <div class="toggle-seg" id="seg-learner">Learner</div>
+              <div class="toggle-seg" id="seg-tutor">Tutor</div>
+            </div>
+            <div id="view-label">seeing the notebook</div>
+            <div id="pack-btn">Lesson pack</div>
+          </div>
+
+          <div id="statusbar">Connected to the room.</div>
+
+          <div id="main">
+            <div id="rail">
+              <div class="card" id="live-card">
+                <div class="live-head">
+                  <div class="live-title">LIVE LESSON</div>
+                  <div class="live-pill">Live · room open</div>
+                </div>
+                <div class="ctrl-row">
+                  <div class="ctrl"><span class="glyph mic"></span>Listen</div>
+                  <div class="ctrl"><span class="glyph"></span>Camera</div>
+                  <div class="ctrl dim"><span class="glyph plus"></span>Capture</div>
+                </div>
+                <div class="tile-row">
+                  <div class="tile">
+                    Waiting for Mark
+                    <div class="tile-chip"><span class="dot"></span>Mark · tutor</div>
+                  </div>
+                  <div class="tile">
+                    Camera off
+                    <div class="tile-chip"><span class="dot live"></span>Ana · you</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card" id="transcript-card">
+                <div class="turn" id="turn-1">
+                  <div class="avatar a">A</div>
+                  <div>
+                    <div class="turn-name">Ana</div>
+                    <div class="turn-line"><span class="write" id="t1-l1">Yesterday I go to the office</span></div>
+                    <div class="turn-line"><span class="write" id="t1-l2">for a big meeting.</span></div>
+                    <div class="turn-tag" id="t1-tag">mistake noted</div>
+                  </div>
+                </div>
+                <div class="turn" id="turn-2">
+                  <div class="avatar m">M</div>
+                  <div>
+                    <div class="turn-name">Mark (tutor)</div>
+                    <div class="turn-line">
+                      Yesterday I went to the office. When you use yesterday, the verb moves into
+                      the past.
+                    </div>
+                    <div class="turn-tag">correction · grammar note</div>
+                  </div>
+                </div>
+                <div class="turn" id="turn-3">
+                  <div class="avatar m">M</div>
+                  <div>
+                    <div class="turn-name">Mark (tutor)</div>
+                    <div class="turn-line">
+                      There is a useful expression for that moment: 'to draw a blank'.
+                    </div>
+                    <div class="turn-tag">vocabulary · grammar note</div>
+                  </div>
+                </div>
+                <div class="turn" id="turn-4">
+                  <div class="avatar a">A</div>
+                  <div>
+                    <div class="turn-name">Ana</div>
+                    <div class="turn-line">
+                      Last month I has three presentations and all of them was stressful.
+                    </div>
+                    <div class="turn-tag">mistake noted</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div id="pane">
+              <div id="tabs">
+                <div class="tab active" id="tab-notes">Notes</div>
+                <div class="tab">Whiteboard</div>
+              </div>
+              <div id="pane-body">
+                <div id="sheet">
+                  <div id="punches">
+                    <span class="punch" style="top: 96px"></span>
+                    <span class="punch" style="top: 436px"></span>
+                    <span class="punch" style="top: 776px"></span>
+                  </div>
+                  <div id="margin-rule"></div>
+                  <div id="paper-body">
+                    <div class="prow" id="meta-row">
+                      <span class="write" id="p-meta"
+                        ><span class="meta">Ana's lesson notes · 19 Sept</span></span
+                      >
+                      <span class="meta" id="p-fieldnotes">AI field notes</span>
+                    </div>
+
+                    <div class="prow">
+                      <span class="write" id="p-focus">
+                        <span class="hand lead">Focus:</span>
+                        <span class="hand">Verb tense</span>
+                      </span>
+                      <span id="focus-chip">
+                        <span class="chip-bars"
+                          ><i style="height: 22px"></i><i style="height: 14px"></i
+                        ></span>
+                        <span class="hand small">Verb tense · 2 corrections</span>
+                        <span class="hand small green">1 fewer than last lesson</span>
+                      </span>
+                    </div>
+
+                    <div class="prow">
+                      <span class="write" id="p-goal">
+                        <span class="hand lead">Goal:</span>
+                        <span class="hand">I want to speak more confidently in meetings.</span>
+                      </span>
+                    </div>
+
+                    <div class="prow"></div>
+
+                    <div class="prow">
+                      <span class="write" id="p-vocab-head">
+                        <span class="hand head green">New vocabulary:</span>
+                      </span>
+                    </div>
+
+                    <div class="prow" style="padding-left: 40px">
+                      <span class="write" id="p-vocab">
+                        <span class="hand bold">· to draw a blank</span>
+                        <span class="hand">—</span>
+                        <span class="hand blue" style="position: relative"
+                          >quedarse en blanco<span id="vocab-underline"></span
+                        ></span>
+                        <span class="hand small"
+                          >There is a useful expression for that moment: 'to draw a blank'.</span
+                        >
+                      </span>
+                    </div>
+
+                    <div class="prow"></div>
+
+                    <div class="prow">
+                      <span class="write" id="p-corr-head">
+                        <span class="hand head pink">Corrections:</span>
+                      </span>
+                    </div>
+
+                    <div class="prow">
+                      <span class="write" id="p-wrong">
+                        <span class="mark-tick hand red">✗</span>
+                        <span class="hand red struck"
+                          >Yesterday I go to the office for a big meeting.<span
+                            id="strike-line"
+                          ></span
+                        ></span>
+                        <span class="hand small">(Verb tense)</span>
+                      </span>
+                    </div>
+
+                    <div class="prow">
+                      <span class="write" id="p-right">
+                        <span class="mark-tick hand green">✓</span>
+                        <span class="hand green" style="position: relative"
+                          >Yesterday I went to the office.<span id="under-line"></span
+                        ></span>
+                        <span class="hand small">(correct)</span>
+                      </span>
+                    </div>
+
+                    <div class="prow">
+                      <span class="write" id="p-pencil">
+                        <span class="mark-tick hand small">~</span>
+                        <span class="hand pencil" style="font-size: 36px"
+                          >Last month I has three presentations and all of them was stressful.</span
+                        >
+                        <span class="hand small">(Subject-verb agreement)</span>
+                      </span>
+                    </div>
+
+                    <div class="prow" style="padding-left: 66px">
+                      <span class="hand small" id="p-waiting"
+                        >waiting for Mark to correct this</span
+                      >
+                    </div>
+
+                    <div class="prow"></div>
+
+                    <div class="prow">
+                      <span class="write" id="p-expl-head">
+                        <span class="hand head green">Tutor explanation:</span>
+                      </span>
+                    </div>
+
+                    <div class="prow" style="padding-left: 40px">
+                      <span class="write" id="p-expl">
+                        <span class="hand"
+                          >Yesterday I went to the office. When you use yesterday, the verb moves
+                          into the past.</span
+                        >
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="tutor">
+                  <div class="tcard" id="tcard-1">
+                    <div class="tcard-head">
+                      <span class="tcard-title">NOT YET CORRECTED</span>
+                      <span class="tcard-note">raise before the lesson ends</span>
+                    </div>
+                    <div class="tquote">
+                      <span class="flag">▲</span>“Last month I has three presentations and all of
+                      them was stressful.”
+                    </div>
+                    <div class="tsub">Subject-verb agreement</div>
+                  </div>
+                  <div class="tcard" id="tcard-2">
+                    <div class="tcard-head">
+                      <span class="tcard-title">CARRIED OVER</span>
+                      <span class="tcard-note">across 4 previous lessons</span>
+                    </div>
+                    <div class="tline"><span>Verb tense</span><span>5 lessons running</span></div>
+                    <div class="tline">
+                      <span>Subject-verb agreement</span><span>3 lessons running</span>
+                    </div>
+                    <div class="tline faded">
+                      <span>Prepositions</span><span>not seen for 4</span>
+                    </div>
+                  </div>
+                  <div class="tcard" id="tcard-3">
+                    <div class="tcard-head"><span class="tcard-title">SUGGESTED NOW</span></div>
+                    <div class="tquote">
+                      Describe last weekend in the past simple, two minutes, no notes
+                    </div>
+                    <div class="tsub" style="margin-left: 0">
+                      because of verb tense, 5 lessons running
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="overlay">
+        <div class="caption" data-layout-allow-overlap id="cap-1">Nobody is taking notes.</div>
+        <div class="caption" data-layout-allow-overlap id="cap-2">It writes down what was actually taught.</div>
+        <div class="caption" data-layout-allow-overlap id="cap-3">And it says when it doesn't know yet.</div>
+        <div class="caption" data-layout-allow-overlap id="cap-4">The tutor gets a different question answered.</div>
+        <div id="outro">
+          <div id="outro-card">
+            <div id="outro-name">LinguaTrace</div>
+            <div id="outro-line">the lesson, kept.</div>
+          </div>
+        </div>
+      </div>
+
+      <audio
+        id="music"
+        data-start="0"
+        data-duration="21.5"
+        data-track-index="10"
+        data-volume="0.3"
+        src="assets/music/happy-beats-business-moves-vol-12-by-ende-dot-app.mp3"
+      ></audio>
+
+      <audio id="k1" data-start="0.26" data-track-index="20" data-volume="0.26" src="assets/sfx/keyboard/keypress-005.wav"></audio>
+      <audio id="k2" data-start="0.44" data-track-index="21" data-volume="0.22" src="assets/sfx/keyboard/keypress-018.wav"></audio>
+      <audio id="k3" data-start="0.62" data-track-index="22" data-volume="0.25" src="assets/sfx/keyboard/keypress-011.wav"></audio>
+      <audio id="k4" data-start="0.80" data-track-index="23" data-volume="0.22" src="assets/sfx/keyboard/keypress-029.wav"></audio>
+      <audio id="k5" data-start="0.98" data-track-index="24" data-volume="0.24" src="assets/sfx/keyboard/keypress-024.wav"></audio>
+      <audio id="k6" data-start="1.12" data-track-index="25" data-volume="0.2" src="assets/sfx/keyboard/keypress-005.wav"></audio>
+
+      <audio id="s-tag" data-start="1.3" data-track-index="26" data-volume="0.3" src="assets/sfx/interface/drop_002.ogg"></audio>
+      <audio id="s-meta" data-start="3.0" data-track-index="27" data-volume="0.3" src="assets/sfx/impact/impactWood_light_000.ogg"></audio>
+      <audio id="s-focus" data-start="3.55" data-track-index="28" data-volume="0.3" src="assets/sfx/impact/impactWood_light_001.ogg"></audio>
+      <audio id="s-goal" data-start="4.45" data-track-index="29" data-volume="0.28" src="assets/sfx/impact/impactWood_light_002.ogg"></audio>
+      <audio id="s-vocab" data-start="5.9" data-track-index="30" data-volume="0.26" src="assets/sfx/impact/impactWood_light_000.ogg"></audio>
+      <audio id="s-wrong" data-start="7.2" data-track-index="31" data-volume="0.32" src="assets/sfx/impact/impactWood_light_001.ogg"></audio>
+      <audio id="s-strike" data-start="8.1" data-track-index="32" data-volume="0.26" src="assets/sfx/impact/impactSoft_medium_001.ogg"></audio>
+      <audio id="s-right" data-start="8.74" data-track-index="33" data-volume="0.38" src="assets/sfx/impact/impactWood_light_002.ogg"></audio>
+      <audio id="s-pencil" data-start="11.9" data-track-index="34" data-volume="0.24" src="assets/sfx/impact/impactWood_light_000.ogg"></audio>
+      <audio id="s-toggle" data-start="15.5" data-track-index="35" data-volume="0.4" src="assets/sfx/interface/switch_007.ogg"></audio>
+      <audio id="s-c1" data-start="16.38" data-track-index="36" data-volume="0.34" src="assets/sfx/interface/drop_001.ogg"></audio>
+      <audio id="s-c2" data-start="17.47" data-track-index="37" data-volume="0.34" src="assets/sfx/interface/drop_001.ogg"></audio>
+      <audio id="s-c3" data-start="18.56" data-track-index="38" data-volume="0.34" src="assets/sfx/interface/drop_001.ogg"></audio>
+      <audio id="s-outro" data-start="20.1" data-track-index="39" data-volume="0.22" src="assets/sfx/interface/bong_001.ogg"></audio>
+    </div>
+
+    <script>
+      const OPEN = "inset(0 0% 0 0)";
+      const SHUT = "inset(0 100% 0 0)";
+
+      // A handwritten line landing on paper: a left-to-right wipe, eased the way a
+      // pen actually crosses a page.
+      function write(tl, sel, at, dur) {
+        tl.fromTo(
+          sel,
+          { clipPath: SHUT },
+          { clipPath: OPEN, duration: dur, ease: "power1.inOut" },
+          at,
+        );
+      }
+
+      function buildTimeline() {
+        const tl = gsap.timeline({ paused: true });
+
+        // Resting state is authored in CSS (opacity / clip-path) so frame 0 is
+        // correct without a zero-duration set inside the paused timeline. Only
+        // transform-backed state is primed here, immediately, outside the timeline.
+        gsap.set("#camera", { scale: 1.9, x: 0, y: -495.5 });
+        gsap.set(["#strike-line", "#under-line"], { scaleX: 0 });
+        gsap.set("#toggle-knob", { x: 0 });
+        gsap.set(["#tcard-1", "#tcard-2", "#tcard-3"], { y: 26 });
+        gsap.set("#seg-learner", { color: "#cfeedd" });
+
+        // ================= Scene 1 — the unattended pen (0.0-3.2) =================
+        write(tl, "#t1-l1", 0.18, 0.62);
+        write(tl, "#t1-l2", 0.82, 0.42);
+        tl.to("#t1-tag", { opacity: 1, duration: 0.3, ease: "power2.out" }, 1.3);
+
+        tl.fromTo("#cap-1", { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.38, ease: "power2.out" }, 0.6);
+        tl.to("#cap-1", { opacity: 0, duration: 0.3, ease: "power2.in" }, 2.62);
+
+        tl.fromTo("#turn-2", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" }, 1.95);
+        tl.fromTo("#turn-3", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" }, 2.45);
+        tl.fromTo("#turn-4", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" }, 2.95);
+
+        // the pull-back that turns one bubble into the whole product
+        tl.fromTo(
+          "#camera",
+          { scale: 1.9, x: 0, y: -495.5 },
+          { scale: 1, x: 0, y: 0, duration: 2.4, ease: "power2.inOut" },
+          1.8,
+        );
+        // the notebook opens from the left edge of the pane
+        tl.fromTo("#pane", { clipPath: SHUT }, { clipPath: OPEN, duration: 0.7, ease: "power2.out" }, 2.6);
+
+        // ================= Scene 2 — the split (3.2-7.0) =================
+        write(tl, "#p-meta", 3.0, 0.5);
+        tl.to("#p-fieldnotes", { opacity: 1, duration: 0.4 }, 3.3);
+        write(tl, "#p-focus", 3.55, 0.7);
+        tl.fromTo("#focus-chip", { opacity: 0, x: 14 }, { opacity: 1, x: 0, duration: 0.45, ease: "power2.out" }, 4.3);
+        write(tl, "#p-goal", 4.45, 0.9);
+        write(tl, "#p-vocab-head", 5.4, 0.45);
+        write(tl, "#p-vocab", 5.9, 0.85);
+        write(tl, "#p-corr-head", 6.6, 0.45);
+
+        // ================= Scene 3 — the correction (7.0-11.5) =================
+        tl.to("#camera", { scale: 1.55, x: -822.5, y: -504.7, duration: 1.0, ease: "power2.inOut" }, 7.0);
+        write(tl, "#p-wrong", 7.2, 0.8);
+        tl.fromTo("#strike-line", { scaleX: 0 }, { scaleX: 1, duration: 0.42, ease: "power2.out" }, 8.1);
+        write(tl, "#p-right", 8.74, 0.75); // beat-locked: 8.74s strong cue
+        tl.fromTo("#under-line", { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: "power2.out" }, 9.55);
+
+        tl.fromTo("#cap-2", { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.34, ease: "power2.out" }, 9.3);
+        tl.to("#cap-2", { opacity: 0, duration: 0.3, ease: "power2.in" }, 11.1);
+
+        // ================= Scene 4 — waiting for the correction (11.5-15.0) =================
+        tl.to("#camera", { scale: 1.5, x: -765, y: -540, duration: 0.95, ease: "power2.inOut" }, 11.5);
+        write(tl, "#p-pencil", 11.9, 0.95);
+        // beat-locked: 13.11s strong cue
+        tl.to("#p-waiting", { opacity: 1, duration: 0.45, ease: "power2.out" }, 13.11);
+
+        tl.fromTo("#cap-3", { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.34, ease: "power2.out" }, 12.9);
+        tl.to("#cap-3", { opacity: 0, duration: 0.3, ease: "power2.in" }, 14.6);
+
+        // the rest of the page keeps filling while the camera is elsewhere
+        write(tl, "#p-expl-head", 13.9, 0.45);
+        write(tl, "#p-expl", 14.35, 0.9);
+
+        // ================= Scene 5 — the switch (15.0-19.5) =================
+        tl.to("#camera", { scale: 1, x: 0, y: 0, duration: 0.9, ease: "power2.inOut" }, 15.0);
+        tl.fromTo("#toggle-knob", { x: 0 }, { x: 120, duration: 0.28, ease: "power2.inOut" }, 15.5);
+        tl.fromTo("#seg-learner", { color: "#cfeedd" }, { color: "#a99a8d", duration: 0.2 }, 15.5);
+        tl.fromTo("#seg-tutor", { color: "#a99a8d" }, { color: "#cfeedd", duration: 0.2 }, 15.6);
+        tl.to("#tab-notes", { opacity: 0.4, duration: 0.3 }, 15.8);
+        tl.to("#sheet", { opacity: 0, duration: 0.42, ease: "power2.inOut" }, 15.85);
+        tl.to("#tutor", { opacity: 1, duration: 0.42, ease: "power2.inOut" }, 15.85);
+
+        // beat-grid: card 1 at 16.38s, card 2 at 17.47s, card 3 at 18.56s
+        tl.fromTo("#tcard-1", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.42, ease: "power2.out" }, 16.38);
+        tl.fromTo("#tcard-2", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.42, ease: "power2.out" }, 17.47);
+        tl.fromTo("#tcard-3", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.42, ease: "power2.out" }, 18.56);
+
+        tl.fromTo("#cap-4", { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.34, ease: "power2.out" }, 16.7);
+        tl.to("#cap-4", { opacity: 0, duration: 0.3, ease: "power2.in" }, 19.1);
+
+        // ================= Scene 6 — the lesson, kept (19.5-21.5) =================
+        tl.to("#tutor", { opacity: 0, duration: 0.35, ease: "power2.inOut" }, 19.5);
+        tl.to("#sheet", { opacity: 1, duration: 0.35, ease: "power2.inOut" }, 19.5);
+        tl.to("#tab-notes", { opacity: 1, duration: 0.3 }, 19.5);
+        tl.to("#camera", { scale: 1.035, x: -33.6, y: -18.9, duration: 1.9, ease: "sine.out" }, 19.5);
+        tl.fromTo(
+          "#app",
+          { filter: "blur(0px)" },
+          { filter: "blur(8px)", duration: 0.7, ease: "power2.out" },
+          19.8,
+        );
+        tl.fromTo("#outro-card", { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 20.05);
+        tl.fromTo("#outro-name", { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, 20.2);
+        tl.fromTo("#outro-line", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" }, 20.55);
+
+        return tl;
+      }
+
+      document.fonts.ready.then(() => {
+        const tl = buildTimeline();
+        window.__timelines["main"] = tl;
+        tl.seek(0);
+        if (window.__hfForceTimelineRebind) window.__hfForceTimelineRebind();
+      });
+    </script>
+  </body>
+</html>

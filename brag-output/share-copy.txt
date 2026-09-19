@@ -1,0 +1,2 @@
+Introducing LinguaTrace: it listens to a one-to-one language lesson and writes the notebook — corrections struck through and rewritten, vocabulary glossed, and a pencil note where it isn't sure yet.
+The learner concentrates on speaking. The tutor concentrates on teaching. Neither of them takes notes.
