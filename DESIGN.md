@@ -100,7 +100,6 @@ components:
     textColor: "{colors.accent}"
     rounded: "{rounded.object}"
     padding: "12px 24px"
-    typography: "{typography.figure}"
   button-primary-hover:
     backgroundColor: "{colors.accent-bg}"
     textColor: "{colors.accent}"

@@ -1,0 +1,686 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-20T12:50:35.795Z",
+  "title": "Design System: LinguaTrace",
+  "extensions": {
+    "colorMeta": {
+      "desk": {
+        "role": "neutral",
+        "displayName": "Desk Brown",
+        "canonical": "oklch(23.1% 0.017 50.6)",
+        "tonalRamp": [
+          "oklch(15% 0.017 50.6)",
+          "oklch(26% 0.017 50.6)",
+          "oklch(38% 0.017 50.6)",
+          "oklch(49% 0.017 50.6)",
+          "oklch(61% 0.017 50.6)",
+          "oklch(72% 0.017 50.6)",
+          "oklch(84% 0.017 50.6)",
+          "oklch(95% 0.017 50.6)"
+        ]
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "Panel",
+        "canonical": "oklch(27.4% 0.020 56.8)",
+        "tonalRamp": [
+          "oklch(15% 0.020 56.8)",
+          "oklch(26% 0.020 56.8)",
+          "oklch(38% 0.020 56.8)",
+          "oklch(49% 0.020 56.8)",
+          "oklch(61% 0.020 56.8)",
+          "oklch(72% 0.020 56.8)",
+          "oklch(84% 0.020 56.8)",
+          "oklch(95% 0.020 56.8)"
+        ]
+      },
+      "panel-raised": {
+        "role": "neutral",
+        "displayName": "Panel Raised",
+        "canonical": "oklch(31.2% 0.023 58.6)",
+        "tonalRamp": [
+          "oklch(15% 0.023 58.6)",
+          "oklch(26% 0.023 58.6)",
+          "oklch(38% 0.023 58.6)",
+          "oklch(49% 0.023 58.6)",
+          "oklch(61% 0.023 58.6)",
+          "oklch(72% 0.023 58.6)",
+          "oklch(84% 0.023 58.6)",
+          "oklch(95% 0.023 58.6)"
+        ]
+      },
+      "panel-edge": {
+        "role": "neutral",
+        "displayName": "Panel Edge",
+        "canonical": "oklch(36.2% 0.030 58.5)",
+        "tonalRamp": [
+          "oklch(15% 0.030 58.5)",
+          "oklch(26% 0.030 58.5)",
+          "oklch(38% 0.030 58.5)",
+          "oklch(49% 0.030 58.5)",
+          "oklch(61% 0.030 58.5)",
+          "oklch(72% 0.030 58.5)",
+          "oklch(84% 0.030 58.5)",
+          "oklch(95% 0.030 58.5)"
+        ]
+      },
+      "desk-shadow": {
+        "role": "neutral",
+        "displayName": "Desk Shadow",
+        "canonical": "oklch(17.5% 0.012 48.0)",
+        "tonalRamp": [
+          "oklch(15% 0.012 48.0)",
+          "oklch(26% 0.012 48.0)",
+          "oklch(38% 0.012 48.0)",
+          "oklch(49% 0.012 48.0)",
+          "oklch(61% 0.012 48.0)",
+          "oklch(72% 0.012 48.0)",
+          "oklch(84% 0.012 48.0)",
+          "oklch(95% 0.012 48.0)"
+        ]
+      },
+      "on-desk": {
+        "role": "neutral",
+        "displayName": "On Desk",
+        "canonical": "oklch(94.3% 0.013 71.3)",
+        "tonalRamp": [
+          "oklch(15% 0.013 71.3)",
+          "oklch(26% 0.013 71.3)",
+          "oklch(38% 0.013 71.3)",
+          "oklch(49% 0.013 71.3)",
+          "oklch(61% 0.013 71.3)",
+          "oklch(72% 0.013 71.3)",
+          "oklch(84% 0.013 71.3)",
+          "oklch(95% 0.013 71.3)"
+        ]
+      },
+      "on-desk-soft": {
+        "role": "neutral",
+        "displayName": "On Desk Soft",
+        "canonical": "oklch(69.6% 0.026 63.3)",
+        "tonalRamp": [
+          "oklch(15% 0.026 63.3)",
+          "oklch(26% 0.026 63.3)",
+          "oklch(38% 0.026 63.3)",
+          "oklch(49% 0.026 63.3)",
+          "oklch(61% 0.026 63.3)",
+          "oklch(72% 0.026 63.3)",
+          "oklch(84% 0.026 63.3)",
+          "oklch(95% 0.026 63.3)"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Lit Mint",
+        "canonical": "oklch(82.4% 0.098 156.8)",
+        "tonalRamp": [
+          "oklch(15% 0.098 156.8)",
+          "oklch(26% 0.098 156.8)",
+          "oklch(38% 0.098 156.8)",
+          "oklch(49% 0.098 156.8)",
+          "oklch(61% 0.098 156.8)",
+          "oklch(72% 0.098 156.8)",
+          "oklch(84% 0.098 156.8)",
+          "oklch(95% 0.098 156.8)"
+        ]
+      },
+      "accent-bg": {
+        "role": "primary",
+        "displayName": "Pine Shadow",
+        "canonical": "oklch(41.9% 0.061 159.8)",
+        "tonalRamp": [
+          "oklch(15% 0.061 159.8)",
+          "oklch(26% 0.061 159.8)",
+          "oklch(38% 0.061 159.8)",
+          "oklch(49% 0.061 159.8)",
+          "oklch(61% 0.061 159.8)",
+          "oklch(72% 0.061 159.8)",
+          "oklch(84% 0.061 159.8)",
+          "oklch(95% 0.061 159.8)"
+        ]
+      },
+      "desk-red": {
+        "role": "tertiary",
+        "displayName": "Desk Red",
+        "canonical": "oklch(76.8% 0.107 29.7)",
+        "tonalRamp": [
+          "oklch(15% 0.107 29.7)",
+          "oklch(26% 0.107 29.7)",
+          "oklch(38% 0.107 29.7)",
+          "oklch(49% 0.107 29.7)",
+          "oklch(61% 0.107 29.7)",
+          "oklch(72% 0.107 29.7)",
+          "oklch(84% 0.107 29.7)",
+          "oklch(95% 0.107 29.7)"
+        ]
+      },
+      "desk-green": {
+        "role": "tertiary",
+        "displayName": "Desk Green",
+        "canonical": "oklch(81.8% 0.120 156.8)",
+        "tonalRamp": [
+          "oklch(15% 0.120 156.8)",
+          "oklch(26% 0.120 156.8)",
+          "oklch(38% 0.120 156.8)",
+          "oklch(49% 0.120 156.8)",
+          "oklch(61% 0.120 156.8)",
+          "oklch(72% 0.120 156.8)",
+          "oklch(84% 0.120 156.8)",
+          "oklch(95% 0.120 156.8)"
+        ]
+      },
+      "paper": {
+        "role": "secondary",
+        "displayName": "Paper Cream",
+        "canonical": "oklch(97.6% 0.015 90.2)",
+        "tonalRamp": [
+          "oklch(15% 0.015 90.2)",
+          "oklch(26% 0.015 90.2)",
+          "oklch(38% 0.015 90.2)",
+          "oklch(49% 0.015 90.2)",
+          "oklch(61% 0.015 90.2)",
+          "oklch(72% 0.015 90.2)",
+          "oklch(84% 0.015 90.2)",
+          "oklch(95% 0.015 90.2)"
+        ]
+      },
+      "paper-rule": {
+        "role": "secondary",
+        "displayName": "Rule Grey",
+        "canonical": "oklch(89.7% 0.025 94.1)",
+        "tonalRamp": [
+          "oklch(15% 0.025 94.1)",
+          "oklch(26% 0.025 94.1)",
+          "oklch(38% 0.025 94.1)",
+          "oklch(49% 0.025 94.1)",
+          "oklch(61% 0.025 94.1)",
+          "oklch(72% 0.025 94.1)",
+          "oklch(84% 0.025 94.1)",
+          "oklch(95% 0.025 94.1)"
+        ]
+      },
+      "paper-margin": {
+        "role": "secondary",
+        "displayName": "Margin Red",
+        "canonical": "oklch(71.5% 0.097 19.7)",
+        "tonalRamp": [
+          "oklch(15% 0.097 19.7)",
+          "oklch(26% 0.097 19.7)",
+          "oklch(38% 0.097 19.7)",
+          "oklch(49% 0.097 19.7)",
+          "oklch(61% 0.097 19.7)",
+          "oklch(72% 0.097 19.7)",
+          "oklch(84% 0.097 19.7)",
+          "oklch(95% 0.097 19.7)"
+        ]
+      },
+      "paper-hole": {
+        "role": "secondary",
+        "displayName": "Punch Dark",
+        "canonical": "oklch(23.1% 0.017 50.6)",
+        "tonalRamp": [
+          "oklch(15% 0.017 50.6)",
+          "oklch(26% 0.017 50.6)",
+          "oklch(38% 0.017 50.6)",
+          "oklch(49% 0.017 50.6)",
+          "oklch(61% 0.017 50.6)",
+          "oklch(72% 0.017 50.6)",
+          "oklch(84% 0.017 50.6)",
+          "oklch(95% 0.017 50.6)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "oklch(28.9% 0.012 67.3)",
+        "tonalRamp": [
+          "oklch(15% 0.012 67.3)",
+          "oklch(26% 0.012 67.3)",
+          "oklch(38% 0.012 67.3)",
+          "oklch(49% 0.012 67.3)",
+          "oklch(61% 0.012 67.3)",
+          "oklch(72% 0.012 67.3)",
+          "oklch(84% 0.012 67.3)",
+          "oklch(95% 0.012 67.3)"
+        ]
+      },
+      "ink-soft": {
+        "role": "neutral",
+        "displayName": "Ink Soft",
+        "canonical": "oklch(55.8% 0.025 73.9)",
+        "tonalRamp": [
+          "oklch(15% 0.025 73.9)",
+          "oklch(26% 0.025 73.9)",
+          "oklch(38% 0.025 73.9)",
+          "oklch(49% 0.025 73.9)",
+          "oklch(61% 0.025 73.9)",
+          "oklch(72% 0.025 73.9)",
+          "oklch(84% 0.025 73.9)",
+          "oklch(95% 0.025 73.9)"
+        ]
+      },
+      "ink-red": {
+        "role": "tertiary",
+        "displayName": "Correction Red",
+        "canonical": "oklch(54.3% 0.174 29.7)",
+        "tonalRamp": [
+          "oklch(15% 0.174 29.7)",
+          "oklch(26% 0.174 29.7)",
+          "oklch(38% 0.174 29.7)",
+          "oklch(49% 0.174 29.7)",
+          "oklch(61% 0.174 29.7)",
+          "oklch(72% 0.174 29.7)",
+          "oklch(84% 0.174 29.7)",
+          "oklch(95% 0.174 29.7)"
+        ]
+      },
+      "ink-green": {
+        "role": "tertiary",
+        "displayName": "Correction Green",
+        "canonical": "oklch(52.9% 0.106 154.6)",
+        "tonalRamp": [
+          "oklch(15% 0.106 154.6)",
+          "oklch(26% 0.106 154.6)",
+          "oklch(38% 0.106 154.6)",
+          "oklch(49% 0.106 154.6)",
+          "oklch(61% 0.106 154.6)",
+          "oklch(72% 0.106 154.6)",
+          "oklch(84% 0.106 154.6)",
+          "oklch(95% 0.106 154.6)"
+        ]
+      },
+      "pen-blue": {
+        "role": "tertiary",
+        "displayName": "Translation Blue",
+        "canonical": "oklch(47.9% 0.117 257.4)",
+        "tonalRamp": [
+          "oklch(15% 0.117 257.4)",
+          "oklch(26% 0.117 257.4)",
+          "oklch(38% 0.117 257.4)",
+          "oklch(49% 0.117 257.4)",
+          "oklch(61% 0.117 257.4)",
+          "oklch(72% 0.117 257.4)",
+          "oklch(84% 0.117 257.4)",
+          "oklch(95% 0.117 257.4)"
+        ]
+      },
+      "mark-green": {
+        "role": "tertiary",
+        "displayName": "Marker Green",
+        "canonical": "oklch(90.6% 0.039 153.5)",
+        "tonalRamp": [
+          "oklch(15% 0.039 153.5)",
+          "oklch(26% 0.039 153.5)",
+          "oklch(38% 0.039 153.5)",
+          "oklch(49% 0.039 153.5)",
+          "oklch(61% 0.039 153.5)",
+          "oklch(72% 0.039 153.5)",
+          "oklch(84% 0.039 153.5)",
+          "oklch(95% 0.039 153.5)"
+        ]
+      },
+      "mark-pink": {
+        "role": "tertiary",
+        "displayName": "Marker Pink",
+        "canonical": "oklch(91.0% 0.034 22.3)",
+        "tonalRamp": [
+          "oklch(15% 0.034 22.3)",
+          "oklch(26% 0.034 22.3)",
+          "oklch(38% 0.034 22.3)",
+          "oklch(49% 0.034 22.3)",
+          "oklch(61% 0.034 22.3)",
+          "oklch(72% 0.034 22.3)",
+          "oklch(84% 0.034 22.3)",
+          "oklch(95% 0.034 22.3)"
+        ]
+      },
+      "mark-blue": {
+        "role": "tertiary",
+        "displayName": "Marker Blue",
+        "canonical": "oklch(91.7% 0.027 255.1)",
+        "tonalRamp": [
+          "oklch(15% 0.027 255.1)",
+          "oklch(26% 0.027 255.1)",
+          "oklch(38% 0.027 255.1)",
+          "oklch(49% 0.027 255.1)",
+          "oklch(61% 0.027 255.1)",
+          "oklch(72% 0.027 255.1)",
+          "oklch(84% 0.027 255.1)",
+          "oklch(95% 0.027 255.1)"
+        ]
+      },
+      "tape": {
+        "role": "tertiary",
+        "displayName": "Gaffer Tape",
+        "canonical": "oklch(88.0% 0.069 92.7)",
+        "tonalRamp": [
+          "oklch(15% 0.069 92.7)",
+          "oklch(26% 0.069 92.7)",
+          "oklch(38% 0.069 92.7)",
+          "oklch(49% 0.069 92.7)",
+          "oklch(61% 0.069 92.7)",
+          "oklch(72% 0.069 92.7)",
+          "oklch(84% 0.069 92.7)",
+          "oklch(95% 0.069 92.7)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display Hand",
+        "purpose": "The single claim on a first screen, in Caveat, set as ink on the desk. One per page."
+      },
+      "headline": {
+        "displayName": "Headline Hand",
+        "purpose": "Section headings on marketing surfaces, constrained to 16-20ch so they break like a written line."
+      },
+      "title": {
+        "displayName": "Title Hand",
+        "purpose": "The notebook's Focus and Goal lines, and the sign-in wordmark."
+      },
+      "hand-note": {
+        "displayName": "Hand Note",
+        "purpose": "Every line written in the notebook: mistakes, corrections, vocabulary, explanations."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "The one supporting sentence under a display claim. Max 46ch."
+      },
+      "body-small": {
+        "displayName": "Body Small",
+        "purpose": "Navigation links, secondary buttons, transcript turns, form fields."
+      },
+      "label": {
+        "displayName": "Panel Label",
+        "purpose": "Titles a desk panel or list. Never set above a headline as a kicker or eyebrow."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "Measured values with tabular numerals, so digits line up down a results list."
+      }
+    },
+    "shadows": [
+      {
+        "name": "object-near",
+        "value": "0 8px 30px rgba(0,0,0,0.35)",
+        "purpose": "The notebook sheet lying on the desk in the app layout."
+      },
+      {
+        "name": "object-lifted",
+        "value": "0 40px 80px -18px rgba(0,0,0,0.8)",
+        "purpose": "The demo screen and the full-width notebook on the landing page."
+      },
+      {
+        "name": "object-below-fold",
+        "value": "0 -10px 50px -12px rgba(0,0,0,0.75)",
+        "purpose": "The cream sheet rising into the first screen, lit from above rather than below."
+      },
+      {
+        "name": "accent-glow",
+        "value": "0 10px 30px -10px rgba(143,217,172,0.45)",
+        "purpose": "The lit key of the one lit action. Primary button only; not a hover effect."
+      },
+      {
+        "name": "taped-card",
+        "value": "0 2px 10px rgba(0,0,0,0.13)",
+        "purpose": "A photograph taped onto the paper."
+      },
+      {
+        "name": "tape-strip",
+        "value": "0 2px 7px rgba(0,0,0,0.16)",
+        "purpose": "The strip of gaffer tape itself, overlapping an edge."
+      },
+      {
+        "name": "play-disc",
+        "value": "0 8px 26px -6px rgba(0,0,0,0.6)",
+        "purpose": "The paper play disc on the video facade."
+      },
+      {
+        "name": "mark-on-desk",
+        "value": "drop-shadow(0 3px 10px rgba(0,0,0,0.5))",
+        "purpose": "The logo, so it reads as an object rather than an inline SVG."
+      }
+    ],
+    "surfaces": [
+      {
+        "name": "desk-light-pool",
+        "value": "radial-gradient(85% 65% at 22% 2%, #4a3a2c 0%, #33271f 30%, #241b16 58%, #150f0c 100%)",
+        "purpose": "The desk as a lit surface at night: work in the light, edges falling away. A flat ground reads as a background rather than a surface."
+      },
+      {
+        "name": "ruled-paper",
+        "value": "repeating-linear-gradient(to bottom, transparent, transparent 35px, var(--paper-rule) 35px, var(--paper-rule) 36px)",
+        "purpose": "The sheet's rules at a 36px pitch, matching the handwriting's line-height exactly."
+      },
+      {
+        "name": "hand-underline",
+        "value": "linear-gradient(to right, transparent, currentColor 8%, currentColor 92%, transparent)",
+        "purpose": "A drawn underline, thicker in the middle and tapering at the ends. 1.5px tall, sat on the baseline."
+      }
+    ],
+    "motion": [
+      {
+        "name": "write-in",
+        "value": "340ms ease-out both; from { opacity: 0; transform: translateY(5px) rotate(-0.3deg) }",
+        "purpose": "Ink landing on paper. Applied to every new notebook line. Disabled under prefers-reduced-motion: reduce."
+      },
+      {
+        "name": "strike-through",
+        "value": "animation-timeline: view(); animation-range: entry 24% cover 38%; scaleX(0) -> scaleX(1)",
+        "purpose": "A line drawn through a sentence as it scrolls into view. The struck state is the default; the draw is nested inside @supports (animation-timeline: view()) and prefers-reduced-motion: no-preference."
+      },
+      {
+        "name": "state-colors",
+        "value": "transition-property: color, background-color, border-color",
+        "purpose": "The only transition in the system. Browser-default duration; no eased transforms on interface state."
+      },
+      {
+        "name": "facade-lift",
+        "value": "transform: scale(1.06) on group hover",
+        "purpose": "The play disc on the video facade, the one transform that responds to hover."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Action",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one lit action on a screen. Pine Shadow bed, Lit Mint text and border, with the accent glow beneath it.",
+      "html": "<a class=\"ds-btn-primary\" href=\"#\">Start a lesson</a>",
+      "css": ".ds-btn-primary { display:inline-block; background: var(--accent-bg,#2c5741); color: var(--accent,#8fd9ac); border:1px solid color-mix(in srgb, var(--accent,#8fd9ac) 40%, transparent); border-radius:12px; padding:12px 24px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size:15px; font-weight:500; text-decoration:none; box-shadow:0 10px 30px -10px rgba(143,217,172,0.45); transition: border-color .2s, color .2s; } .ds-btn-primary:hover { border-color: color-mix(in srgb, var(--accent,#8fd9ac) 70%, transparent); } .ds-btn-primary:focus-visible { outline:2px solid var(--accent,#8fd9ac); outline-offset:2px; border-radius:2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Every non-primary action on the desk: Panel fill, Panel Edge hairline, plain On Desk text.",
+      "html": "<button class=\"ds-btn-secondary\" type=\"button\">End lesson</button>",
+      "css": ".ds-btn-secondary { background: var(--panel,#2f251e); color: var(--on-desk,#f2ebe3); border:1px solid var(--panel-edge,#4a3a2e); border-radius:8px; padding:8px 14px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size:13px; cursor:pointer; transition: border-color .2s; } .ds-btn-secondary:hover { border-color: color-mix(in srgb, var(--on-desk-soft,#a99a8d) 50%, transparent); } .ds-btn-secondary:focus-visible { outline:2px solid var(--accent,#8fd9ac); outline-offset:2px; border-radius:2px; } .ds-btn-secondary:disabled { opacity:.4; }"
+    },
+    {
+      "name": "Control Button",
+      "kind": "button",
+      "refersTo": "control-button",
+      "description": "The mic / camera / capture cluster in the live rail. Drawn SVG icon over an 11px label; active state swaps to the accent.",
+      "html": "<div style=\"display:flex;gap:8px\"><button class=\"ds-control ds-control--active\" type=\"button\" aria-pressed=\"true\"><svg width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\"><rect x=\"9\" y=\"2.5\" width=\"6\" height=\"11\" rx=\"3\"/><path d=\"M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21\"/></svg><span>Mute</span></button><button class=\"ds-control\" type=\"button\"><svg width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 7.5h4l1.5-2h7L17 7.5h4v11H3z\"/><circle cx=\"12\" cy=\"13\" r=\"3.2\"/></svg><span>Camera</span></button></div>",
+      "css": ".ds-control { flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; background: var(--panel-raised,#3a2e25); color: var(--on-desk,#f2ebe3); border:1px solid var(--panel-edge,#4a3a2e); border-radius:12px; padding:12px 8px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size:11px; line-height:1; cursor:pointer; transition: border-color .2s; } .ds-control:hover { border-color: color-mix(in srgb, var(--on-desk-soft,#a99a8d) 50%, transparent); } .ds-control--active { background: color-mix(in srgb, var(--accent-bg,#2c5741) 50%, transparent); color: var(--accent,#8fd9ac); border-color: color-mix(in srgb, var(--accent,#8fd9ac) 50%, transparent); } .ds-control:focus-visible { outline:2px solid var(--accent,#8fd9ac); outline-offset:2px; border-radius:2px; }"
+    },
+    {
+      "name": "Status Pill",
+      "kind": "chip",
+      "refersTo": "pill-accent",
+      "description": "Live status and settled percentages in the rail. Accent on a Pine Shadow bed, or muted on Panel Raised when nothing is happening.",
+      "html": "<span class=\"ds-pill ds-pill--accent\">Live · listening</span> <span class=\"ds-pill ds-pill--muted\">Not started</span>",
+      "css": ".ds-pill { display:inline-block; border-radius:9999px; padding:4px 10px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size:11px; font-weight:500; } .ds-pill--accent { background: var(--accent-bg,#2c5741); color: var(--accent,#8fd9ac); } .ds-pill--muted { background: var(--panel-raised,#3a2e25); color: var(--on-desk-soft,#a99a8d); }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Every field in the app: Panel Raised over a Panel Edge hairline, focus handled by the global accent outline rather than a border shift.",
+      "html": "<input class=\"ds-input\" type=\"email\" placeholder=\"Email\" aria-label=\"Email\">",
+      "css": ".ds-input { width:100%; background: var(--panel-raised,#3a2e25); color: var(--on-desk,#f2ebe3); border:1px solid var(--panel-edge,#4a3a2e); border-radius:8px; padding:8px 12px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size:14px; caret-color: var(--accent,#8fd9ac); } .ds-input::placeholder { color: color-mix(in srgb, var(--on-desk-soft,#a99a8d) 60%, transparent); } .ds-input:focus-visible { outline:2px solid var(--accent,#8fd9ac); outline-offset:2px; border-radius:2px; } .ds-input:disabled { opacity:.4; }"
+    },
+    {
+      "name": "Tab Strip",
+      "kind": "nav",
+      "refersTo": "tab-active",
+      "description": "A Panel box holding equal-width tabs. The selected tab fills Pine Shadow with Lit Mint text; the rest stay quiet on transparent.",
+      "html": "<div class=\"ds-tabs\"><button class=\"ds-tab ds-tab--on\" type=\"button\">Sign in</button><button class=\"ds-tab\" type=\"button\">Create account</button></div>",
+      "css": ".ds-tabs { display:flex; background: var(--panel,#2f251e); border:1px solid var(--panel-edge,#4a3a2e); border-radius:8px; padding:2px; } .ds-tab { flex:1; border:0; background:transparent; color: var(--on-desk-soft,#a99a8d); border-radius:6px; padding:6px 12px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size:12px; cursor:pointer; } .ds-tab--on { background: var(--accent-bg,#2c5741); color: var(--accent,#8fd9ac); } .ds-tab:focus-visible { outline:2px solid var(--accent,#8fd9ac); outline-offset:2px; border-radius:2px; }"
+    },
+    {
+      "name": "Desk Panel",
+      "kind": "card",
+      "refersTo": "card-panel",
+      "description": "The default container on the desk. Tonal step plus a 1px hairline, and no shadow at all: it is a region of the interface, not an object on the surface.",
+      "html": "<section class=\"ds-panel\"><h2 class=\"ds-panel__label\">To practise</h2><p class=\"ds-panel__body\">Past simple of irregular verbs</p></section>",
+      "css": ".ds-panel { background: var(--panel,#2f251e); border:1px solid var(--panel-edge,#4a3a2e); border-radius:16px; padding:14px; color: var(--on-desk,#f2ebe3); font-family: Inter, ui-sans-serif, system-ui, sans-serif; } .ds-panel__label { margin:0 0 10px; font-size:11px; font-weight:400; text-transform:uppercase; letter-spacing:.14em; color: var(--on-desk-soft,#a99a8d); } .ds-panel__body { margin:0; font-size:13px; line-height:1.4; }"
+    },
+    {
+      "name": "Notebook Sheet",
+      "kind": "custom",
+      "refersTo": "notebook-sheet",
+      "description": "The signature object: cream paper ruled at a 36px pitch, punch holes and a red margin rule in the left gutter, a struck sentence in red and its correction in green beneath.",
+      "html": "<div class=\"ds-sheet\"><span class=\"ds-sheet__hole\" style=\"top:34px\"></span><span class=\"ds-sheet__hole\" style=\"top:120px\"></span><span class=\"ds-sheet__margin\"></span><div class=\"ds-sheet__body\"><p class=\"ds-sheet__focus\"><span class=\"ds-sheet__red\">Focus:</span> Verb tense</p><p class=\"ds-sheet__struck\">Yesterday I go to the office.</p><p class=\"ds-sheet__fixed\"><span class=\"ds-sheet__underline\">Yesterday I went to the office.</span></p></div></div>",
+      "css": ".ds-sheet { position:relative; overflow:hidden; border-radius:12px; background-color: var(--paper,#fbf7ec); background-image: repeating-linear-gradient(to bottom, transparent, transparent 35px, var(--paper-rule,#e2ddcb) 35px, var(--paper-rule,#e2ddcb) 36px); box-shadow:0 8px 30px rgba(0,0,0,0.35); min-height:210px; } .ds-sheet__hole { position:absolute; left:28px; width:14px; height:14px; border-radius:9999px; background: color-mix(in srgb, var(--paper-hole,#241b16) 85%, transparent); } .ds-sheet__margin { position:absolute; left:74px; top:0; bottom:0; width:1px; background: var(--paper-margin,#d98a8a); } .ds-sheet__body { padding:28px 40px 28px 98px; color: var(--ink,#2f2a25); font-family: Caveat, ui-rounded, cursive; } .ds-sheet__focus { margin:0; font-size:1.5rem; line-height:2.1rem; } .ds-sheet__red { color: var(--ink-red,#c0392b); } .ds-sheet__struck { margin:12px 0 0; font-size:1.25rem; line-height:2rem; color: var(--ink-red,#c0392b); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--ink-red,#c0392b) 70%, transparent); } .ds-sheet__fixed { margin:0; font-size:1.25rem; line-height:2rem; color: var(--ink-green,#2e7d4f); } .ds-sheet__underline { background-image: linear-gradient(to right, transparent, currentColor 8%, currentColor 92%, transparent); background-repeat:no-repeat; background-position:0 100%; background-size:100% 1.5px; padding-bottom:2px; }"
+    },
+    {
+      "name": "Marker Heading & Unsure Chip",
+      "kind": "chip",
+      "refersTo": "chip-unsure",
+      "description": "A marker-pen highlight behind a paper heading (uneven radii, never a software rectangle), and the chip that marks a line the model was not confident about.",
+      "html": "<h3 class=\"ds-paper-h\"><span class=\"ds-mark ds-mark--green\">New vocabulary:</span></h3><p class=\"ds-tentative\">sobremesa <span class=\"ds-unsure\">unsure</span></p>",
+      "css": ".ds-paper-h { margin:0 0 8px; font-family: Caveat, ui-rounded, cursive; font-size:1.6rem; font-weight:400; } .ds-mark { padding:.05em .45em .1em; border-radius:.6em .3em .55em .25em; -webkit-box-decoration-break: clone; box-decoration-break: clone; color: var(--ink,#2f2a25); } .ds-mark--green { background: var(--mark-green,#cde8d4); } .ds-tentative { margin:0; opacity:.66; font-family: Caveat, ui-rounded, cursive; font-size:1.35rem; line-height:2.25rem; color: var(--ink,#2f2a25); } .ds-unsure { display:inline-block; margin-left:8px; vertical-align:middle; border:1px solid color-mix(in srgb, var(--ink-soft,#7d7264) 40%, transparent); border-radius:4px; padding:1px 4px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size:9px; text-transform:uppercase; letter-spacing:.06em; color: var(--ink-soft,#7d7264); }"
+    },
+    {
+      "name": "Taped Card",
+      "kind": "card",
+      "refersTo": "taped-card",
+      "description": "A photograph or note taped onto the page: square corners, a close shadow, a rotated strip of gaffer tape cut with an uneven polygon.",
+      "html": "<figure class=\"ds-taped\"><span class=\"ds-taped__tape\"></span><figcaption class=\"ds-taped__cap\"><span class=\"ds-mark2\">Tutor correction</span></figcaption><p class=\"ds-taped__body\">&ldquo;We use the past simple for a finished action.&rdquo;</p></figure>",
+      "css": ".ds-taped { position:relative; margin:0; background:#fff; padding:28px 20px 24px; box-shadow:0 2px 10px rgba(0,0,0,0.13); transform: rotate(-1.2deg); color: var(--ink,#2f2a25); width:260px; } .ds-taped__tape { position:absolute; top:-10px; left:50%; transform: translateX(-50%) rotate(-2deg); width:80px; height:20px; background: color-mix(in srgb, var(--tape,#e7d7a4) 80%, transparent); box-shadow:0 2px 7px rgba(0,0,0,0.16); clip-path: polygon(3% 0%, 97% 4%, 100% 96%, 96% 100%, 5% 97%, 0% 6%); } .ds-taped__cap { font-family: Caveat, ui-rounded, cursive; font-size:1.25rem; margin-bottom:12px; } .ds-mark2 { padding:.05em .45em .1em; border-radius:.6em .3em .55em .25em; background: var(--mark-pink,#f7d9d7); -webkit-box-decoration-break: clone; box-decoration-break: clone; } .ds-taped__body { margin:0; font-family: Caveat, ui-rounded, cursive; font-size:1.2rem; line-height:2rem; color: var(--ink-soft,#7d7264); }"
+    },
+    {
+      "name": "Pen Mark",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "The two marks a tutor makes, drawn rather than typed. One stroke weight and one cap across the pair, so they look like one pen. On the desk they take the lifted red and green.",
+      "html": "<p class=\"ds-pen ds-pen--wrong\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.6\" stroke-linecap=\"round\"><path d=\"M5.5 5 19 19\"/><path d=\"M19 5 5.5 19\"/></svg>The AI writes up your lesson.</p><p class=\"ds-pen ds-pen--right\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.6\" stroke-linecap=\"round\"><path d=\"M4 13.2 9.6 19 20 5.5\"/></svg>Every line is quoted from what was said.</p>",
+      "css": ".ds-pen { margin:0 0 4px; font-family: Caveat, ui-rounded, cursive; font-size:1.9rem; line-height:1.35; } .ds-pen svg { display:inline-block; width:.62em; height:.62em; margin-right:.32em; flex-shrink:0; vertical-align:baseline; } .ds-pen--wrong { color: var(--desk-red,#f0998b); } .ds-pen--right { color: var(--desk-green,#7ddba4); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Lit Desk at Night",
+    "overview": "Everything in this product happens on one of two surfaces, and they are deliberately unalike. A dark wooden desk - warm-brown, lit from the upper left so the work sits in a pool of light and the edges fall away - holds the live call, the controls, the transcript: software, disposable, gone when the lesson ends. A sheet of cream ruled paper, punched and held down with gaffer tape, holds the lesson notes: the thing the learner keeps. The contrast is not decoration, it is the argument. Because of that the design is fixed rather than following the system light/dark preference.\n\nThe density is two-speed. On the desk, the app is compact and plain: 11-15px Inter, soft panels, thin edges, one lit action. On the paper, it is loose and large: Caveat at 1.15-1.9rem on a 36px rule pitch, room between the lines, ink that lands rather than appears. Nothing is ever styled to look \"like\" the other surface; the chrome the browser normally supplies - selection, caret, scrollbar, focus ring - is themed from whichever surface it sits on, so the split survives even there.\n\nThe landing page is the newest expression of the same world and takes nothing new from outside it: the demo is an object lying on the desk at 0.6deg with a deep blurred shadow, the notebook is the real component rendered from a scripted lesson rather than a screenshot, the marks beside the corrections are drawn strokes rather than font glyphs, and the one accent green appears exactly once per screen, on Start a lesson. The confirmed rejections are the centred-hero-over-screenshot default and the three-column feature grid; a page that explained two unalike surfaces in a card grid would be arguing against itself.",
+    "keyCharacteristics": [
+      "Two surfaces, never blended: dark desk and cream ruled paper",
+      "A lit surface, not a flat background - the desk carries a light pool and falls to shadow at the edges",
+      "One reserved accent green, spent once per screen on the primary action",
+      "Handwriting for anything a person would have written; Inter for everything the machine says",
+      "Soft, deep, blurred shadows - objects lie on the desk, they do not sit in cards",
+      "Slight rotation and uneven radii wherever a human hand is implied",
+      "Uncertainty is visible: tentative notes are dimmed and chipped, never asserted"
+    ],
+    "rules": [
+      {
+        "name": "The Two Surfaces Rule",
+        "body": "A dark desk holds the call; a cream sheet holds the lesson. Nothing blends them: no paper-tinted panels, no dark notebook, no system-preference switch. The contrast is the product's argument.",
+        "section": "colors"
+      },
+      {
+        "name": "The Paper/Desk Split Rule",
+        "body": "Ink tokens are for paper; desk tokens are for the desk. ink-red and ink-green never appear on the desk - use desk-red and desk-green. on-desk and on-desk-soft never appear on paper.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Lit Action Rule",
+        "body": "The accent green is spent once per screen, on the single action that screen wants. If two things on a screen are mint, one of them is wrong.",
+        "section": "colors"
+      },
+      {
+        "name": "The Designed Chrome Rule",
+        "body": "Selection, caret, scrollbar and focus ring are themed, not inherited. Selection is Pine Shadow on the desk and Marker Green on paper; the caret is Ink inside .paper; the scrollbar is Panel Edge on Desk Brown; focus-visible is a 2px Lit Mint outline at 2px offset.",
+        "section": "colors"
+      },
+      {
+        "name": "The Hand and Machine Rule",
+        "body": "If a person would have written it, it is Caveat. If the software is saying it, it is Inter. A measurement, a control label, a status, a caveat about sample size: Inter, always.",
+        "section": "typography"
+      },
+      {
+        "name": "The Two Faces Rule",
+        "body": "Caveat and Inter, both loaded through next/font. No third family, no system display stack, no web-font swap-in for a decorative moment.",
+        "section": "typography"
+      },
+      {
+        "name": "The Sample Size Rule",
+        "body": "A figure is never set alone. Every measurement carries its n in the same line (\"100% · 45 labelled cases\"), because a figure without its sample size is a claim rather than a measurement.",
+        "section": "typography"
+      },
+      {
+        "name": "The Off-Grid Rule",
+        "body": "Anything meant to read as a physical object is rotated by a fraction of a degree (0.6deg, -1.1deg, -1.2deg, 0.8deg, 1.4deg) and offset from its container's alignment. Perfect alignment is what makes something read as a card.",
+        "section": "layout"
+      },
+      {
+        "name": "The Object-Not-Card Rule",
+        "body": "If it should read as a thing on the desk, it gets a wide soft shadow and a fraction of a degree of rotation. If it is a region of the interface, it gets a tonal step and a hairline edge, and no shadow at all. Never both.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Soft Light Rule",
+        "body": "Every shadow is blurred and offset downward from an upper-left source. No hard offset shadows, no rings, no glass, no backdrop blur.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Uneven Hand Rule",
+        "body": "Anything that represents a hand-made mark gets asymmetry: uneven radii, a clipped polygon, or a rotation. A symmetric rounded rectangle on paper is a bug.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do keep the two surfaces unalike. Desk tokens on the desk, paper tokens on paper, and nothing in between.",
+      "Do use desk-red (#f0998b) and desk-green (#7ddba4) whenever a correction gesture appears on the desk. ink-red measures 2.45:1 there, below even the large-text floor.",
+      "Do spend the accent green exactly once per screen, on the primary action, on a Pine Shadow bed.",
+      "Do set anything a person would have written in Caveat, and everything the software says in Inter.",
+      "Do give placed objects a wide soft shadow and a fraction of a degree of rotation; give interface regions a tonal step and a 1px Panel Edge hairline.",
+      "Do draw marks - crosses, ticks, play triangles, mic icons - as inline SVG with a shared stroke weight and cap, so a pair of marks looks like one pen.",
+      "Do state every measurement with its sample size in the same line.",
+      "Do show uncertainty: 66% opacity plus an \"unsure\" chip for a tentative line, and a quiet dotted underline for a mistake nobody has corrected yet.",
+      "Do theme the browser's own surfaces - selection, caret, scrollbar, focus ring - from whichever surface they sit on.",
+      "Do ship motion as an enhancement: the struck/finished state is the default, and the animation is nested inside both a @supports test and a reduced-motion query."
+    ],
+    "donts": [
+      "Don't introduce a third type family, a system display stack, or a decorative web font. Caveat and Inter only.",
+      "Don't put a small uppercase label above a headline as a kicker or eyebrow. The 11px/0.14em label exists to title a desk panel or list, nothing else.",
+      "Don't use hard offset shadows, rings, glass, or backdrop blur. Shadows are blurred, downward, and from an upper-left source.",
+      "Don't use a font glyph (✗, ✓, ▶, •) as an icon in new work. The landing page's PenMark is the precedent: draw it.",
+      "Don't follow the system light/dark preference. The palette is fixed because the contrast between the two surfaces is the argument.",
+      "Don't let the accent be a large fill. It is text, a border, and a small bed - never a wide mint block.",
+      "Don't give paper a symmetric rounded-rectangle highlight or perfectly cut tape. Hand-made marks are uneven on purpose.",
+      "Don't strike an uncorrected mistake in red. Red means a correction exists beneath it.",
+      "Don't nest a scrolling container inside another scrolling container; let the document flow when it is the whole page.",
+      "Don't let a third-party embed set the palette of a first screen. Stand a facade in the page's own materials in front of it."
+    ]
+  }
+}
