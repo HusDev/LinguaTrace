@@ -7,10 +7,15 @@ after that.
 
 Nobody writes anything during the call. That is the means, not the point.
 
+**Try it: [linguatrace.com](https://linguatrace.com)** · **Watch the demo below**
+
 ## What it looks like
 
-**[Watch the 21-second demo](brag-output/brag.mp4)** — download it from GitHub to
-play; the source composition that renders it is beside it.
+[![Watch the demo](https://img.youtube.com/vi/wdozDzfWJfc/maxresdefault.jpg)](https://www.youtube.com/watch?v=wdozDzfWJfc)
+
+**[Watch the demo on YouTube](https://www.youtube.com/watch?v=wdozDzfWJfc)** — a
+lesson from first turn to Lesson Pack. There is also a 21-second cut in
+`brag-output/brag.mp4`, with the source composition that renders it beside it.
 
 ![The lesson notebook filling in as a lesson runs](docs/screenshots/lesson-notebook.jpg)
 
@@ -609,7 +614,8 @@ filesystem between requests. Platforms whose functions start empty each time wil
 lose every lesson unless the database moves to a hosted one first - that means
 rewriting `lib/db.ts`, and nothing above it.
 
-Deployed at **https://linguatrace-e04587.fly.dev**.
+Deployed at **https://linguatrace.com**. The Fly hostname,
+`https://linguatrace-e04587.fly.dev`, serves the same app and stays live.
 
 A `Dockerfile` and `fly.toml` are included:
 
