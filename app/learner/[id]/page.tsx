@@ -121,9 +121,16 @@ export default async function LearnerHome({
       </section>
 
       <section>
-        <h2 className="text-[11px] uppercase tracking-[0.14em] text-on-desk-soft mb-3">
+        <h2 className="text-[11px] uppercase tracking-[0.14em] text-on-desk-soft mb-1">
           Lessons
         </h2>
+        {/* What this page is for. Someone opening their history has come back
+            to go over a lesson again, not to admire the count of them, so the
+            list says plainly that each row is practice rather than a record. */}
+        <p className="text-[12px] text-on-desk-soft mb-3">
+          Open one to revise it - the flashcards and gap-fills are built from
+          the sentences you got wrong in that lesson.
+        </p>
         {lessons.length === 0 ? (
           <p className="text-sm text-on-desk-soft">No lessons yet.</p>
         ) : (
@@ -147,6 +154,13 @@ export default async function LearnerHome({
                       {lesson.vocabulary} {lesson.vocabulary === 1 ? "word" : "words"} ·{" "}
                       {lesson.turns} {lesson.turns === 1 ? "turn" : "turns"}
                     </span>
+                    {/* Counted rather than promised: a lesson with nothing to
+                        drill should not offer practice that does not exist. */}
+                    {lesson.corrected + lesson.vocabulary > 0 && (
+                      <span className="text-[11px] text-accent shrink-0">
+                        {lesson.corrected + lesson.vocabulary} to practise
+                      </span>
+                    )}
                   </div>
                 </Link>
               </li>

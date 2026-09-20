@@ -128,11 +128,21 @@ export function NotebookPage({
   previous,
   captures,
   date,
+  flow = false,
 }: {
   notebook: Notebook;
   previous?: Notebook;
   captures: Array<{ id: string; dataUrl: string; kind: "camera" | "whiteboard" }>;
   date: string;
+  /**
+   * Let the page grow instead of scrolling inside itself.
+   *
+   * Beside a live call the notebook is one panel of a fixed layout, so it holds
+   * its height and scrolls within it. Opened on its own it is just a document,
+   * and a document trapped in a box inside a window that does not move is two
+   * scrollbars doing one job.
+   */
+  flow?: boolean;
 }) {
   const focus = lessonFocus(notebook);
   const progress = progressNote(notebook, previous);
@@ -151,10 +161,14 @@ export function NotebookPage({
     notebook.grammar.length === 0;
 
   /* On a phone the page scrolls, so the paper grows with its content; on the
-     desk it is a fixed panel that scrolls inside itself. A scroll container
-     nested inside another leaves the notes stuck in a short box. */
+     desk beside a call it is a fixed panel that scrolls inside itself. A scroll
+     container nested inside another leaves the notes stuck in a short box. */
   return (
-    <div className="paper rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.35)] w-full min-h-full lg:h-full lg:overflow-y-auto relative">
+    <div
+      className={`paper rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.35)] w-full min-h-full relative ${
+        flow ? "" : "lg:h-full lg:overflow-y-auto"
+      }`}
+    >
       {/* Punch holes and the margin rule. */}
       <div aria-hidden className="absolute left-0 top-0 bottom-0 w-10 lg:w-[74px]">
         <span className="absolute left-3 lg:left-7 top-[76px] h-2.5 w-2.5 lg:h-3.5 lg:w-3.5 rounded-full bg-paper-hole/85" />

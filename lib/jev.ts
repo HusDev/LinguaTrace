@@ -725,6 +725,128 @@ export function contextSentence(text: string, term: string): string {
   return containing[0] ?? text;
 }
 
+/* ------------------------------------------------------------------ *
+ * The reconciliation pass - asking again, once the lesson is over
+ * ------------------------------------------------------------------ */
+
+/**
+ * Pair the corrections the live pass was too early to see.
+ *
+ * Judging a turn the moment it arrives is what makes the tutor's view useful,
+ * and it costs something: the pairing question is only ever shown the last
+ * three learner turns, so a tutor who circles back - "earlier you said 'I go',
+ * it should be 'I went'" - is correcting a sentence that scrolled out of view
+ * turns ago. Nothing is wrong with the judgment. The question was asked before
+ * the answer existed.
+ *
+ * So it is asked once more when the lesson ends, with every uncorrected mistake
+ * on one side and every tutor sentence of the whole lesson on the other. There
+ * is no deadline here and nobody waiting, which is exactly why this is the pass
+ * that can afford to look at everything.
+ *
+ * Still selection, not generation: the candidates are the tutor's own
+ * sentences, enumerated in code.
+ */
+const MAX_OPEN_MISTAKES = 10;
+const MAX_TUTOR_SPANS = 60;
+
+export interface OpenMistake {
+  id: string;
+  said: string;
+}
+
+export interface LateCorrection {
+  mistakeId: string;
+  corrected: string;
+  /** Which tutor turn it came from, so the pairing can be checked for order. */
+  turnId: string;
+  /** The calibrated probability that this sentence was corrected at all. */
+  confidence: number;
+  /** How concentrated the span pick was. A floor, not a band. */
+  spanConfidence: number;
+}
+
+export async function pairOpenMistakes(
+  open: OpenMistake[],
+  tutorTurns: Turn[],
+  options: JudgeOptions = {},
+): Promise<LateCorrection[]> {
+  const mistakes = open.slice(0, MAX_OPEN_MISTAKES);
+  if (mistakes.length === 0) return [];
+
+  /* Every tutor sentence in the lesson, each remembered against the turn it
+     came from so the caller can reject a "correction" that predates the
+     mistake it claims to fix. */
+  const spans: Array<{ text: string; turnId: string }> = [];
+  for (const turn of tutorTurns) {
+    for (const text of sentences(turn.text)) {
+      spans.push({ text, turnId: turn.id });
+    }
+  }
+  const candidates = spans.slice(-MAX_TUTOR_SPANS);
+  if (candidates.length === 0) return [];
+
+  const spanCriteria = labelled(
+    candidates.map((c) => c.text),
+    "t",
+  );
+
+  const questions: Record<string, Question> = {};
+  mistakes.forEach((mistake, i) => {
+    questions[`corrected_${i}`] = noul(
+      `Somewhere in this lesson, did the tutor give the corrected form of the learner sentence labelled m${i} in the state? Look at the whole lesson, not only the turns around it.`,
+      {
+        true: "The tutor restated that sentence with the error fixed, at any point in the lesson.",
+        false: "The tutor never gave a corrected version of that particular sentence.",
+      },
+    );
+    questions[`span_${i}`] = choice(
+      `Suppose the tutor corrected the learner sentence labelled m${i}. Which of the tutor's sentences is the corrected form of it - the words the learner should now say?`,
+      spanCriteria,
+    );
+  });
+
+  const { answers } = await jevClient().systemOne(
+    {
+      state: {
+        lesson: "One-to-one English conversation lesson between a tutor and a learner.",
+        uncorrected_learner_sentences: Object.fromEntries(
+          mistakes.map((m, i) => [`m${i}`, m.said]),
+        ),
+        tutor_sentences: Object.fromEntries(
+          candidates.map((c, i) => [`t${i}`, c.text]),
+        ),
+      },
+      questions,
+    },
+    { signal: options.signal },
+  );
+
+  const read = (key: string) =>
+    (answers as Record<string, { type: string; choice?: string; confidence?: number; noul?: number } | undefined>)[key];
+
+  const found: LateCorrection[] = [];
+  mistakes.forEach((mistake, i) => {
+    const present = read(`corrected_${i}`);
+    const pick = read(`span_${i}`);
+    if (present?.type !== "noul" || pick?.type !== "choice") return;
+    if (!pick.choice || pick.choice === NONE) return;
+
+    const candidate = candidates[Number(pick.choice.slice(1))];
+    if (!candidate) return;
+
+    found.push({
+      mistakeId: mistake.id,
+      corrected: candidate.text,
+      turnId: candidate.turnId,
+      confidence: present.noul ?? 0,
+      spanConfidence: pick.confidence ?? 0,
+    });
+  });
+
+  return found;
+}
+
 export function certaintyFor(score: number): "confirmed" | "tentative" | null {
   if (score >= CONFIRM_THRESHOLD) return "confirmed";
   if (score >= TENTATIVE_THRESHOLD) return "tentative";

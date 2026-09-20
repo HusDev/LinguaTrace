@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Logo } from "@/components/Logo";
 import { useRouter } from "next/navigation";
 
 /**
@@ -48,6 +49,7 @@ export default function LoginPage() {
   return (
     <main className="flex-1 grid place-items-center p-6">
       <div className="w-full max-w-sm">
+        <Logo className="h-11 w-11 mb-4 drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]" />
         <h1 className="font-hand text-4xl leading-none mb-1">LinguaTrace</h1>
         <p className="text-[13px] text-on-desk-soft mb-6">
           The lesson notebook that writes itself.

@@ -1,19 +1,26 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { NotebookPage } from "@/components/Notebook";
+import { LessonRecordView } from "@/components/LessonRecord";
 import { redirect } from "next/navigation";
 import { getLearner, getLessonParticipants, listLessons, loadNotebook } from "@/lib/db";
 import { currentAccount } from "@/lib/auth";
+import { buildLessonPack } from "@/lib/lessonPack";
 
 export const dynamic = "force-dynamic";
 
 /**
- * One lesson, kept.
+ * One lesson, kept - and revisable.
  *
  * The same notebook the learner watched fill during the call, rendered from
- * storage instead of live state. Whiteboard snapshots taped in during the
- * lesson are here; camera captures are absent by design - they are a person's
- * face and were never written down.
+ * storage instead of live state, and beside it the Lesson Pack built from it.
+ * The pack used to exist only in the tab where the lesson ended: the flashcards
+ * and gap-fills made from the learner's own corrections - the one part of the
+ * app whose whole purpose is revision - were the only thing the app did not
+ * keep. They need no storage of their own, because they are code over the
+ * notebook and the notebook was always kept.
+ *
+ * Whiteboard snapshots taped in during the lesson are here; camera captures are
+ * absent by design - they are a person's face and were never written down.
  */
 export default async function LessonRecord({
   params,
@@ -48,7 +55,7 @@ export default async function LessonRecord({
     : "";
 
   return (
-    <main className="flex-1 flex flex-col p-3 sm:p-4 gap-3 max-w-[1200px] w-full mx-auto lg:h-screen lg:overflow-hidden">
+    <main className="flex-1 flex flex-col p-3 sm:p-4 gap-3 max-w-[1200px] w-full mx-auto lg:flex-none lg:h-screen lg:overflow-hidden">
       <header className="flex flex-wrap items-baseline gap-3 shrink-0 px-1">
         <h1 className="font-hand text-2xl sm:text-3xl leading-none">
           {notebook.learnerName} &amp; {notebook.tutorName}
@@ -70,14 +77,13 @@ export default async function LessonRecord({
         </Link>
       </header>
 
-      <div className="flex-1 min-h-0">
-        <NotebookPage
-          notebook={notebook}
-          previous={previous}
-          captures={notebook.captures}
-          date={date}
-        />
-      </div>
+      <LessonRecordView
+        notebook={notebook}
+        previous={previous}
+        captures={notebook.captures}
+        date={date}
+        pack={buildLessonPack(notebook, previous)}
+      />
     </main>
   );
 }

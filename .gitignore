@@ -49,3 +49,15 @@ data/
 
 # Archify visual-check evidence, regenerated on demand
 docs/architecture/*.visual-check.*
+
+# Impeccable design tooling.
+# The durable artefacts are kept: PRODUCT.md and DESIGN.md at the root, and the
+# surface briefs that carry each surface's direction contract. What is ignored
+# is the working output - review screenshots, comps, build state - which is
+# regenerated on every run and is megabytes of PNG nobody reads twice.
+/.impeccable/*
+!/.impeccable/surfaces/
+!/.impeccable/design.json
+!/.impeccable/config.json
+/.codex/
+/.cursor/

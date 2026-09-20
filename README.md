@@ -1,11 +1,11 @@
 # LinguaTrace
 
 An intelligent lesson notebook. During a one-to-one language lesson it listens to
-the conversation, writes down what was actually taught, and turns the call into a
-Lesson Pack the learner can revise from.
+the conversation, writes down what was actually taught, and turns the call into
+something the learner can practise from afterwards - this week, and the week
+after that.
 
-The learner concentrates on speaking. The tutor concentrates on teaching. Neither
-of them takes notes.
+Nobody writes anything during the call. That is the means, not the point.
 
 ## What it looks like
 
@@ -38,7 +38,16 @@ computed; none of it was visible to the person who could act on it.
 
 ![A saved lesson, reopened later](docs/screenshots/lesson-record.jpg)
 
-A lesson is a page you can reopen, not a file you never will.
+A lesson is a page you can reopen, not a file you never will - and it opens on
+**Revise**, not on the notes. The flashcards and the gap-fills are there, built
+from what that lesson actually corrected, however long ago it was.
+
+That was the part most worth keeping and the only part the app used to throw
+away. The pack was assembled when a lesson ended and rendered in the live call,
+and nowhere else: close the tab and the exercises were gone, while the notes
+they came from were safe in the database. Nothing needed storing to fix it,
+because `buildLessonPack` is code over the notebook - it only ever needed asking
+for somewhere other than the call.
 
 ### The whiteboard is a working surface
 
@@ -55,6 +64,30 @@ Learners forget most of what happens in a private lesson. They write incomplete
 notes, miss corrections while they are busy speaking, and understand a mistake on
 the call only to repeat it a week later. Tutors then spend unpaid time after every
 lesson writing summaries and building exercises.
+
+### Writing things down is how people learn, so where did it go?
+
+It is a fair objection, and the honest answer is that this app does give
+something up. Writing a note yourself is part of learning it; a page written for
+you is not the same as a page you wrote.
+
+But in a **speaking** lesson, writing competes with the thing being practised.
+You cannot hold a conversation in a language you are still learning and take
+notes about it at the same time, and a learner who tries does both badly - which
+is why the notes people actually come away with are three half-sentences and a
+word they cannot read. That is not true of a lecture, where writing costs you
+nothing but attention. It is true here.
+
+So the writing is not removed. It **moves from during the lesson to after it** -
+and it moves to the part that does more work anyway. Reading your notes again is
+the thing everyone means to do and the thing that helps least. Being asked a
+question you have to answer, about a sentence you personally got wrong, is what
+makes a lesson stick. That is what the Lesson Pack is: gap-fills built from the
+learner's own corrected sentences, where the answer is the word their tutor
+actually used.
+
+Which makes the capture the boring half of this product. The lesson notes exist
+so that there is something to come back to.
 
 ## What it records
 
@@ -270,6 +303,33 @@ that decided the entry should exist. A Choice confidence is only ever a floor on
 whether a selected span is safe to quote, which is a different question with its
 own constant.
 
+### Asked again, once the lesson is over
+
+Judging a turn the moment it arrives is what makes the tutor's view worth
+having, and it has a cost that is easy to miss: the pairing question is only
+ever shown the last three learner turns. A tutor who circles back - "one thing
+from earlier, you said 'I go', it should be 'I went'" - is correcting a sentence
+that left the window long ago. Nothing is wrong with the judgment; the question
+was asked before the answer existed, and the learner kept a pencil note reading
+"waiting for Mark to correct this" about something Mark corrected out loud.
+
+So when the lesson ends the corrections are paired **once more, against the
+whole transcript**, before the Lesson Pack is built. Every mistake still open on
+one side, every tutor sentence of the lesson on the other, in one request. There
+is no deadline and nobody waiting, which is exactly why this is the pass that
+can afford to read everything.
+
+Two things are checked in code rather than asked for. A correction may not
+predate the mistake it claims to fix - the model is not reliable about
+chronology, so ordering is verified against the transcript - and a "correction"
+identical to the mistake is refused, because striking out a sentence and
+offering the same sentence back is a bug wearing a red pen.
+
+It is still selection, not generation: the candidates are the tutor's own
+sentences. And it is the reason the live pass can stay narrow. Immediacy is
+what the tutor needs during the lesson; completeness is what the learner needs
+afterwards, and they no longer have to be the same pass.
+
 ## The design rule: Jev judges, code writes
 
 Nothing in the notebook is generated. Jev returns typed answers and calibrated
@@ -352,6 +412,9 @@ Vonage room (stubbed)  ->  transcript turns
                    the notebook page (live)
                                 |
                      POST /api/pack
+                                |
+                 reconcile: pair the corrections the       one request, no deadline
+                 live window was too early to see
                                 v
                    lib/lessonPack.ts - summary, flashcards,
                    gap-fills built from the learner's own corrections
@@ -404,11 +467,12 @@ presentation.
 
 ```
 /                 the live lesson
-/lesson/[id]      one lesson, kept - the link you send someone
+/lesson/[id]      one lesson, to revise from - the link you send someone
 /learner/[id]     every lesson, and the trend across them
 ```
 
-The learner home is the point of storing anything. It is the only place the app
+The learner home is the point of storing anything. It is where a learner goes
+back to practise a lesson from a fortnight ago, and it is the only place the app
 can say "verb tense, four lessons running" or "prepositions, not seen for two
 lessons" - claims no in-memory version could make, and the ones a tutor most
 wants before the next lesson starts.

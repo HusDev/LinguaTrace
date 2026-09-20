@@ -24,7 +24,14 @@ import {
   mergeChanges,
 } from "../lib/boardSync";
 import { buildLessonPack } from "../lib/lessonPack";
-import { type Judge, isEcho, openMistake, processTurn, similarity } from "../lib/notebook";
+import {
+  type Judge,
+  isEcho,
+  openMistake,
+  processTurn,
+  reconcileNotebook,
+  similarity,
+} from "../lib/notebook";
 import { emptyNotebook, type Notebook, type Turn } from "../lib/types";
 
 let failed = 0;
@@ -607,6 +614,7 @@ async function policyChecks() {
       classifyTurn: async () => ({ ...NO_SIGNALS, ...signals }),
       selectSpans: async () => selections,
       translateTerm: async () => null,
+      pairOpenMistakes: async () => [],
     };
   }
 
@@ -718,6 +726,7 @@ async function policyChecks() {
         }),
       selectSpans: async () => ({}),
       translateTerm: async () => null,
+      pairOpenMistakes: async () => [],
     };
     const result = await processTurn(notebook, learnerTurn, {
       judge: slow,
@@ -728,6 +737,166 @@ async function policyChecks() {
     check("but stays in the transcript", notebook.turns.length === 1);
   }
 
+  console.log("\nreconcileNotebook()");
+  /* Live, the pairing question sees three learner turns. A tutor circling back
+     to something said much earlier had nothing to attach the correction to, so
+     the learner kept "waiting for the correction" about a sentence that was
+     corrected out loud. This is the pass that reads the whole lesson. */
+  function lessonWithLateCorrection(): Notebook {
+    return {
+      ...emptyNotebook("lesson-r1", "Ana", "Mark"),
+      turns: [
+        /* A tutor turn before the mistake, so "the tutor corrected it" can be
+           tested against something that cannot possibly have corrected it. */
+        { id: "t-pre", speaker: "tutor", text: "So how was your week?", at: -1_000 },
+        { id: "t0", speaker: "learner", text: "Yesterday I go to the office.", at: 0 },
+        { id: "t1", speaker: "tutor", text: "And how was the meeting?", at: 1_000 },
+        { id: "t2", speaker: "learner", text: "It was long but useful.", at: 2_000 },
+        { id: "t3", speaker: "learner", text: "We finished at six.", at: 3_000 },
+        { id: "t4", speaker: "learner", text: "Then I went home.", at: 4_000 },
+        {
+          id: "t5",
+          speaker: "tutor",
+          text: "One thing from earlier. Yesterday I went to the office. With yesterday the verb moves to the past.",
+          at: 5_000,
+        },
+      ],
+      mistakes: [
+        {
+          id: "m1",
+          said: "Yesterday I go to the office.",
+          errorType: "verb_tense",
+          severity: 2,
+          provenance: { turnIds: ["t0"], score: 0.9, certainty: "confirmed" },
+        },
+      ],
+    };
+  }
+
+  function judgePairing(
+    result: Array<{
+      mistakeId: string;
+      corrected: string;
+      turnId: string;
+      confidence: number;
+      spanConfidence: number;
+    }>,
+  ): Judge {
+    return {
+      classifyTurn: async () => ({ ...NO_SIGNALS }),
+      selectSpans: async () => ({}),
+      translateTerm: async () => null,
+      pairOpenMistakes: async () => result,
+    };
+  }
+
+  {
+    const notebook = lessonWithLateCorrection();
+    const closed = await reconcileNotebook(notebook, {
+      judge: judgePairing([
+        {
+          mistakeId: "m1",
+          corrected: "Yesterday I went to the office.",
+          turnId: "t5",
+          confidence: 0.9,
+          spanConfidence: 0.8,
+        },
+      ]),
+    });
+    check("a correction from later in the lesson still lands", closed === 1);
+    check(
+      "and the mistake stops waiting for one",
+      notebook.mistakes[0].corrected === "Yesterday I went to the office.",
+    );
+  }
+
+  {
+    /* The model is not reliable about ordering, so chronology is checked in
+       code: a tutor cannot have corrected something not yet said. */
+    const notebook = lessonWithLateCorrection();
+    const closed = await reconcileNotebook(notebook, {
+      judge: judgePairing([
+        {
+          mistakeId: "m1",
+          corrected: "So how was your week?",
+          turnId: "t-pre",
+          confidence: 0.9,
+          spanConfidence: 0.9,
+        },
+      ]),
+    });
+    check("a correction that predates its mistake is refused", closed === 0);
+    check("and nothing is written", notebook.mistakes[0].corrected === undefined);
+  }
+
+  {
+    const notebook = lessonWithLateCorrection();
+    const closed = await reconcileNotebook(notebook, {
+      judge: judgePairing([
+        {
+          mistakeId: "m1",
+          corrected: "Yesterday I go to the office.",
+          turnId: "t5",
+          confidence: 0.9,
+          spanConfidence: 0.9,
+        },
+      ]),
+    });
+    /* Striking out a sentence and offering the identical sentence back as the
+       correct version reads as a bug, because it is one. */
+    check("a correction identical to the mistake is refused", closed === 0);
+  }
+
+  {
+    const notebook = lessonWithLateCorrection();
+    const closed = await reconcileNotebook(notebook, {
+      judge: judgePairing([
+        {
+          mistakeId: "m1",
+          corrected: "Yesterday I went to the office.",
+          turnId: "t5",
+          confidence: 0.3,
+          spanConfidence: 0.9,
+        },
+      ]),
+    });
+    check("an unsure late pairing is dropped, not hedged", closed === 0);
+  }
+
+  {
+    const notebook = lessonWithLateCorrection();
+    notebook.mistakes[0].corrected = "Already sorted.";
+    const closed = await reconcileNotebook(notebook, {
+      judge: judgePairing([
+        {
+          mistakeId: "m1",
+          corrected: "Yesterday I went to the office.",
+          turnId: "t5",
+          confidence: 0.9,
+          spanConfidence: 0.9,
+        },
+      ]),
+    });
+    check("a mistake already corrected is left alone", closed === 0);
+    check(
+      "and keeps the correction it had",
+      notebook.mistakes[0].corrected === "Already sorted.",
+    );
+  }
+
+  {
+    const notebook = lessonWithLateCorrection();
+    const broken: Judge = {
+      ...judgePairing([]),
+      pairOpenMistakes: async () => {
+        throw new Error("no");
+      },
+    };
+    const closed = await reconcileNotebook(notebook, { judge: broken });
+    check("a failed pass costs the pairings, never the notebook", closed === 0);
+    check("and the lesson is untouched", notebook.mistakes.length === 1);
+  }
+
   {
     const notebook = emptyNotebook("lesson-p7", "Ana", "Mark");
     const broken: Judge = {
@@ -736,6 +905,7 @@ async function policyChecks() {
       },
       selectSpans: async () => ({}),
       translateTerm: async () => null,
+      pairOpenMistakes: async () => [],
     };
     let reported = "";
     try {
@@ -759,6 +929,7 @@ async function policyChecks() {
       classifyTurn: async () => ({ ...NO_SIGNALS, introducesVocabulary: 0.9 }),
       selectSpans: async () => ({ vocabulary: { term: "to draw a blank", confidence: 0.8 } }),
       translateTerm: () => new Promise((resolve) => { resolveGloss = resolve; }),
+      pairOpenMistakes: async () => [],
     };
     await processTurn(
       notebook,

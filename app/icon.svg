@@ -1,0 +1,14 @@
+<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <!--
+    The tab-sized cut of the mark.
+
+    A favicon is read at sixteen pixels, where the punch holes and the third
+    unfinished line turn to mush, so both are dropped and what is left is the
+    one idea worth keeping: a page, a sentence struck out, and the right one
+    under it. Strokes are heavier than the full mark for the same reason.
+  -->
+  <rect x="2" y="1" width="28" height="30" rx="4" fill="#fbf7ec"/>
+  <path d="M9.5 1v30" stroke="#d98a8a" stroke-width="1.4"/>
+  <path d="M13 11.5h13" stroke="#c0392b" stroke-width="3" stroke-linecap="round"/>
+  <path d="M13 20.5h10.5" stroke="#2e7d4f" stroke-width="3" stroke-linecap="round"/>
+</svg>

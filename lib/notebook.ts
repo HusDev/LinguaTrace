@@ -15,12 +15,15 @@ import {
   CHOICE_FLOOR,
   TURN_DEADLINE_MS,
   type JudgeOptions,
+  type LateCorrection,
+  type OpenMistake,
   type TurnSelections,
   type TurnSignals,
   certaintyFor,
   classifyTurn,
   contextSentence,
   contextWindow,
+  pairOpenMistakes,
   pairingWindow,
   selectSpans,
 } from "./jev";
@@ -66,10 +69,20 @@ export interface Judge {
     targetLanguage: string,
     nativeLanguage: string,
   ): Promise<string | null>;
+  pairOpenMistakes(
+    open: OpenMistake[],
+    tutorTurns: Turn[],
+    options?: JudgeOptions,
+  ): Promise<LateCorrection[]>;
 }
 
 /** The real thing. */
-export const liveJudge: Judge = { classifyTurn, selectSpans, translateTerm };
+export const liveJudge: Judge = {
+  classifyTurn,
+  selectSpans,
+  translateTerm,
+  pairOpenMistakes,
+};
 
 function prov(turnIds: string[], score: number, certainty: Certainty): Provenance {
   return { turnIds, score, certainty };
@@ -450,4 +463,72 @@ export async function processTurn(
     added,
     signals: signals as unknown as Record<string, number>,
   };
+}
+
+/**
+ * Ask again, now that the whole lesson can be seen.
+ *
+ * Judging a turn as it lands is what makes the tutor's view worth having, and
+ * it means every pairing decision is made on three learner turns of hindsight.
+ * A tutor who circles back - "earlier you said 'I go', it should be 'I went'" -
+ * is correcting a sentence that left the window long ago, so the correction had
+ * nothing to attach to and the learner keeps a pencil note reading "waiting for
+ * Mark to correct this" about something Mark corrected out loud.
+ *
+ * Run once, when the lesson ends. Returns how many mistakes it closed.
+ */
+export async function reconcileNotebook(
+  notebook: Notebook,
+  options: ProcessOptions = {},
+): Promise<number> {
+  const { judge = liveJudge } = options;
+
+  const open = notebook.mistakes.filter((m) => !m.corrected);
+  const tutorTurns = notebook.turns.filter((t) => t.speaker === "tutor");
+  if (open.length === 0 || tutorTurns.length === 0) return 0;
+
+  /* No deadline. The lesson is over, nobody is waiting, and this is the one
+     pass that can afford to read everything. */
+  let found: LateCorrection[];
+  try {
+    found = await judge.pairOpenMistakes(
+      open.map((m) => ({ id: m.id, said: m.said })),
+      tutorTurns,
+    );
+  } catch {
+    // A failed reconciliation costs late pairings, never the notebook.
+    return 0;
+  }
+
+  /* Where each turn sits in the lesson, so a correction cannot predate the
+     mistake it claims to fix. The model is not asked to respect chronology -
+     it is not reliable about ordering - so the ordering is checked here. */
+  const position = new Map(notebook.turns.map((t, i) => [t.id, i]));
+
+  let closed = 0;
+  for (const late of found) {
+    const mistake = notebook.mistakes.find((m) => m.id === late.mistakeId);
+    if (!mistake || mistake.corrected) continue;
+
+    const certainty = certaintyFor(late.confidence);
+    if (!certainty || late.spanConfidence < CHOICE_FLOOR) continue;
+
+    const saidAt = mistake.provenance.turnIds
+      .map((id) => position.get(id) ?? -1)
+      .filter((i) => i >= 0)
+      .sort((a, b) => a - b)[0];
+    const correctedAt = position.get(late.turnId) ?? -1;
+    if (saidAt === undefined || correctedAt <= saidAt) continue;
+
+    /* A correction that repeats the mistake word for word has corrected
+       nothing, and showing it struck through beside an identical "correct"
+       version reads as a bug. */
+    if (normalise(late.corrected) === normalise(mistake.said)) continue;
+
+    mistake.corrected = late.corrected;
+    mistake.correctionProvenance = prov([late.turnId], late.confidence, certainty);
+    closed += 1;
+  }
+
+  return closed;
 }

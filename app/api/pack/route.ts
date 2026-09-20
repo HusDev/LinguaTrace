@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { buildLessonPack } from "@/lib/lessonPack";
-import { finishLesson, getLesson, learnerIdFor, previousLesson } from "@/lib/store";
+import {
+  finishLesson,
+  getLesson,
+  learnerIdFor,
+  previousLesson,
+  withLesson,
+} from "@/lib/store";
+import { reconcileNotebook } from "@/lib/notebook";
 import { currentAccount } from "@/lib/auth";
 
 export const runtime = "nodejs";
@@ -25,6 +32,19 @@ export async function POST(request: Request) {
   }
 
   const learnerId = learnerIdFor(lessonId);
+
+  /* Before the pack is built, the corrections are paired once more against the
+     whole lesson. Live, the pairing question only ever sees the last few
+     learner turns, so a tutor circling back to something said twenty turns ago
+     had nothing to attach the correction to - and the learner kept a note
+     reading "waiting for the correction" about a sentence that was corrected
+     out loud. Nothing is waiting on this, so it is the one pass that can read
+     the whole transcript.
+
+     Queued behind the lesson's turns so a last turn still being folded in is
+     not reconciled from underneath. */
+  const closed = await withLesson(lessonId, () => reconcileNotebook(notebook));
+
   const pack = buildLessonPack(
     notebook,
     learnerId ? previousLesson(learnerId, lessonId) : undefined,
@@ -33,5 +53,5 @@ export async function POST(request: Request) {
   // Closing the lesson is what makes it part of the learner's history.
   finishLesson(lessonId);
 
-  return NextResponse.json({ pack, learnerId });
+  return NextResponse.json({ pack, learnerId, lateCorrections: closed });
 }
